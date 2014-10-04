@@ -55,32 +55,43 @@ class PollingActor[D <: Device](
     }
   }
 
-  private def scheduleAgain(): Unit = {
-    val now = joda.LocalDateTime.now()
+  protected[harvester] def durationUntilNextPoll(pollSentAt: joda.LocalDateTime,
+                                                 now: joda.LocalDateTime)
+                                                : Option[FiniteDuration] = {
+
     val diff = new joda.Duration(pollSentAt.toDateTime, now.toDateTime).getMillis.millis
 
     req.target match {
       case Every(interval, _) => {
         if (diff >= interval) {
           log.warning(s"Missed target for polling ${req.device} [target: ${req.target}]")
-          self ! PollNow
+          Some(Duration.Zero)
         } else {
-          scheduleIn(interval - diff)
+          Some(interval - diff)
         }
       }
 
       case t@Within((lower, upper), _) => {
         if (diff >= upper) {
           log.warning(s"Missed target for polling ${req.device} [target: ${req.target}]")
-          self ! PollNow
+          Some(Duration.Zero)
         } else if (diff >= lower) {
-          self ! PollNow
+          Some(Duration.Zero)
         } else {
-          scheduleIn(t.midpoint - diff)
+          Some(t.midpoint - diff)
         }
       }
 
-      case t => { }
+      case t => None
+    }
+  }
+
+  private def scheduleAgain(): Unit = {
+    val now = joda.LocalDateTime.now()
+    durationUntilNextPoll(pollSentAt, now) match {
+      case Some(Duration.Zero) => self ! PollNow
+      case Some(nonZero)       => scheduleIn(nonZero)
+      case None                => { }
     }
   }
 
