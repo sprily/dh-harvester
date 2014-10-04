@@ -114,5 +114,13 @@ class PollingActor[D <: Device](
 }
 
 object PollingActor {
+
+  def props[D <: Device](req: PersistentRequest[D])
+                        (implicit directory: DeviceDirectoryService[D]): Props = {
+
+    Props(new PollingActor[D](req, directory))
+
+  }
+
   class PollingTimedOutException extends Exception
 }
