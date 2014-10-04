@@ -14,6 +14,6 @@ trait GatewayService[D <: Device] {
 }
 
 trait GatewayProtocol[D <: Device] {
-  case class Poll(d: D, selection: D#RegisterSelection)
+  case class Poll(d: D, selection: D#AddressSelection)
   case class PollResult(timestamp: joda.LocalDateTime)
 }
