@@ -1,11 +1,12 @@
-package uk.co.sprily
-package dh
+package uk.co.sprily.dh
 package harvester
 
 import akka.actor.ActorContext
 import akka.actor.ActorSelection
 
 import org.joda.{time => joda}
+
+import network.Device
 
 trait GatewayService[D <: Device] {
   object Protocol extends GatewayProtocol[D]

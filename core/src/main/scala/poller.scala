@@ -1,5 +1,4 @@
-package uk.co.sprily
-package dh
+package uk.co.sprily.dh
 package harvester
 
 import scala.concurrent.duration._
@@ -10,6 +9,8 @@ import akka.actor.Props
 import akka.actor.ReceiveTimeout
 
 import org.joda.{time => joda}
+
+import network.Device
 
 class PollingActor[D <: Device](
     val req: PersistentRequest[D],

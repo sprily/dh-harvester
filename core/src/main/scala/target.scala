@@ -1,5 +1,4 @@
-package uk.co.sprily
-package dh
+package uk.co.sprily.dh
 package harvester
 
 import scala.concurrent.duration._

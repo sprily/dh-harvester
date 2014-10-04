@@ -1,6 +1,6 @@
-package uk.co.sprily
-package dh
+package uk.co.sprily.dh
 package harvester
+package network
 
 case class DeviceId(v: Long) extends AnyVal
 
