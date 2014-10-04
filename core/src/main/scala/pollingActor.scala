@@ -25,12 +25,13 @@ class PollingActor[D <: Device](
 
   private var pollSentAt = joda.LocalDateTime.now()
 
-  override def preStart() = {
-    setReceiveTimeout()
-    self ! PollNow
-  }
-
   def receive = {
+
+    case StartActor => {
+      log.debug(s"Starting PollingActor: ${self}")
+      setReceiveTimeout()
+      self ! PollNow
+    }
 
     case PollNow => {
       log.debug(s"Polling device ${req.device}")
@@ -96,6 +97,7 @@ class PollingActor[D <: Device](
   private val pollMsg = Poll(req.device, req.selection)
 
   sealed trait Protocol
+  case object StartActor extends Protocol
   case object PollNow extends Protocol
   
 }
