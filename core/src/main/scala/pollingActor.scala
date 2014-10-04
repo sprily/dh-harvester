@@ -14,11 +14,11 @@ import network.Device
 
 class PollingActor[D <: Device](
     val req: PersistentRequest[D],
-    val gwService: GatewayService[D]) extends Actor
-                                         with ActorLogging {
+    val directory: DeviceDirectoryService[D]) extends Actor
+                                                 with ActorLogging {
 
   import PollingActor._
-  import gwService.Protocol._
+  import directory.Protocol._
 
   private implicit val dispatcher =  context.system.dispatcher
   private val scheduler = context.system.scheduler
@@ -87,7 +87,7 @@ class PollingActor[D <: Device](
     scheduler.scheduleOnce(duration, self, PollNow)
   }
 
-  private def gateway = gwService.lookup(req.device)
+  private def gateway = directory.lookup(req.device)
 
   private def setReceiveTimeout(): Unit = {
     context.setReceiveTimeout(req.target.timeout)
