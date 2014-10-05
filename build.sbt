@@ -7,3 +7,5 @@ scalaVersion in ThisBuild := "2.11.2"
 lazy val core = project in file("core")
 
 libraryDependencies in ThisBuild += "org.specs2" %% "specs2-core" % "2.4.6" % "test"
+
+libraryDependencies in ThisBuild += "org.specs2" %% "specs2-scalacheck" % "2.4.6-scalaz-7.0.6"

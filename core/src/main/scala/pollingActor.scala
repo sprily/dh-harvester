@@ -23,93 +23,51 @@ class PollingActor[D <: Device](
   private implicit val dispatcher =  context.system.dispatcher
   private val scheduler = context.system.scheduler
 
-  private var pollSentAt = joda.LocalDateTime.now()
+  private var schedule: req.target.Schedule = _
 
   def receive = {
 
     case StartActor => {
       log.debug(s"Starting PollingActor: ${self}")
-      setReceiveTimeout()
-      self ! PollNow
+      schedule = req.target.start
+      scheduleAgain()
     }
 
-    case PollNow => {
+    case PollNow(timeout: FiniteDuration) => {
       log.debug(s"Polling device ${req.device}")
-      pollSentAt = joda.LocalDateTime.now()
+      context.setReceiveTimeout(schedule.timeout)
       gateway ! pollMsg
     }
 
     case ReceiveTimeout => {
       log.warning(s"Timed-out out waiting for response from ${req.device}")
+      schedule = req.target.timedOut(schedule)
       throw new PollingTimedOutException()
     }
 
     case PollResult(ts) => {
       log.debug(s"Received PollResult from gateway: ${ts}")
       // TODO: send this result somewhere
-      req.target match {
-        case Every(_, _)  => scheduleAgain()
-        case Within(_, _) => scheduleAgain()
-        case _            => { }
-      }
-    }
-  }
-
-  protected[harvester] def durationUntilNextPoll(pollSentAt: joda.LocalDateTime,
-                                                 now: joda.LocalDateTime)
-                                                : Option[FiniteDuration] = {
-
-    val diff = new joda.Duration(pollSentAt.toDateTime, now.toDateTime).getMillis.millis
-
-    req.target match {
-      case Every(interval, _) => {
-        if (diff >= interval) {
-          log.warning(s"Missed target for polling ${req.device} [target: ${req.target}]")
-          Some(Duration.Zero)
-        } else {
-          Some(interval - diff)
-        }
-      }
-
-      case t@Within((lower, upper), _) => {
-        if (diff >= upper) {
-          log.warning(s"Missed target for polling ${req.device} [target: ${req.target}]")
-          Some(Duration.Zero)
-        } else if (diff >= lower) {
-          Some(Duration.Zero)
-        } else {
-          Some(t.midpoint - diff)
-        }
-      }
-
-      case t => None
+      schedule = req.target.completed(schedule)
+      scheduleAgain()
     }
   }
 
   private def scheduleAgain(): Unit = {
-    val now = joda.LocalDateTime.now()
-    durationUntilNextPoll(pollSentAt, now) match {
-      case Some(Duration.Zero) => self ! PollNow
-      case Some(nonZero)       => scheduleIn(nonZero)
-      case None                => { }
-    }
+    scheduleIn(schedule.delay, schedule.timeout)
   }
 
-  private def scheduleIn(duration: FiniteDuration) = {
-    scheduler.scheduleOnce(duration, self, PollNow)
+  private def scheduleIn(duration: FiniteDuration, timeout: FiniteDuration) = {
+    scheduler.scheduleOnce(duration, self, PollNow(timeout))
   }
 
   private def gateway = directory.lookup(req.device)
-
-  private def setReceiveTimeout(): Unit = {
-    context.setReceiveTimeout(req.target.timeout)
-  }
 
   private val pollMsg = Poll(req.device, req.selection)
 
   sealed trait Protocol
   case object StartActor extends Protocol
-  case object PollNow extends Protocol
+  case class PollNow(timeout: FiniteDuration) extends Protocol
   
 }
 
