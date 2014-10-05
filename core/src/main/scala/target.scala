@@ -23,12 +23,6 @@ trait Target {
   /* helper methods */
   def now() = LocalDateTime.now()
 
-  def diff(first: LocalDateTime, second: LocalDateTime) = {
-    new JDuration(
-      first.toDateTime(DateTimeZone.UTC),
-      second.toDateTime(DateTimeZone.UTC)
-    ).getMillis.millis
-  }
 }
 
 trait ScheduleInfo {
@@ -75,7 +69,7 @@ case class Each(interval: FiniteDuration) extends Target {
 
   def completed(previous: Schedule, now: LocalDateTime) = {
 
-    val delta = diff(now, previous.deadline)
+    val delta = previous.deadline - now
     val deadline = delta match {
       case delta if delta >= Duration.Zero =>
         previous.deadline + interval
@@ -85,7 +79,7 @@ case class Each(interval: FiniteDuration) extends Target {
 
     Schedule(
       delay = delta max Duration.Zero,
-      timeout = diff(now, deadline) min interval,
+      timeout = (deadline - now) min interval,
       deadline = deadline
     )
   }
@@ -97,8 +91,20 @@ case class Each(interval: FiniteDuration) extends Target {
 object Target {
 
   implicit class JodaLocalDateTimeOps(ts: LocalDateTime) {
+
     def +(d: FiniteDuration): LocalDateTime = {
       ts.plus(JDuration.millis(d.toMillis))
+    }
+
+    def -(d: FiniteDuration): LocalDateTime = {
+      ts + (-d)
+    }
+
+    def -(ts2: LocalDateTime) = {
+      new JDuration(
+        ts2.toDateTime(DateTimeZone.UTC),
+        ts.toDateTime(DateTimeZone.UTC)
+      ).getMillis.millis
     }
   }
 

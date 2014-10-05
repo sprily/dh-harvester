@@ -11,6 +11,7 @@ import org.scalacheck.Gen
 
 import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
+import org.specs2.matcher.Parameters
 
 class TargetSpec extends Specification with ScalaCheck {
 
@@ -94,6 +95,23 @@ class TargetSpec extends Specification with ScalaCheck {
 
   }
 
+  "JodaLocalDateTimeOps" should {
+    "calculate difference between LocalDateTimes" in {
+
+      import Target._
+
+      prop {
+        (now: LocalDateTime, delta: Int) => {
+          val then = now + delta.millis
+          (then - now).toMillis must === (delta)
+        }
+      }
+    }
+  }
+
+  // scalacheck config
+  implicit val params = Parameters(minTestsOk = 1000)
+
   private implicit val LocalDateTimeOrdering = new Ordering[LocalDateTime] {
     def compare(t1: LocalDateTime, t2: LocalDateTime) = t1.compareTo(t2)
   }
@@ -109,6 +127,17 @@ class TargetSpec extends Specification with ScalaCheck {
     }
   }
 
+  private implicit def dateTimes = Arbitrary {
+    for {
+      year <- Gen.choose(0,3000)
+      month <- Gen.choose(1,12)
+      day <- Gen.choose(1,28)
+      hour <- Gen.choose(0,23)
+      minute <- Gen.choose(0,59)
+      second <- Gen.choose(0,59)
+    } yield new LocalDateTime(year, month, day, hour, minute, second)
+  }
+
   private implicit def positiveDurations = Arbitrary { 
     Gen.choose(0, Int.MaxValue) map (_.millis)
   }
@@ -119,4 +148,5 @@ class TargetSpec extends Specification with ScalaCheck {
     * because we want the scala.concurrent.duration ones
     */
   override def intToRichLong(v: Int) = super.intToRichLong(v)
+  override def longAsTime(v: Long) = super.longAsTime(v)
 }
