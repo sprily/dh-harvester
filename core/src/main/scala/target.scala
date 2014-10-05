@@ -3,6 +3,7 @@ package harvester
 
 import scala.concurrent.duration._
 
+import org.joda.time.DateTimeZone
 import org.joda.time.LocalDateTime
 import org.joda.time.{Duration => JDuration}
 
@@ -24,8 +25,8 @@ trait Target {
 
   def diff(first: LocalDateTime, second: LocalDateTime) = {
     new JDuration(
-      first.toDateTime,
-      second.toDateTime
+      first.toDateTime(DateTimeZone.UTC),
+      second.toDateTime(DateTimeZone.UTC)
     ).getMillis.millis
   }
 }
