@@ -37,14 +37,26 @@ trait ScheduleInfo {
 }
 
 /**
-  * Targets a uniformly distributed sequence of Schedules.
+  * Targets a regularly distributed sequence of Schedules.
   *
   * Eg. given an interval of 5 seconds, this Target will create Schedules for
   * 0s, 5s, 10s, 15s ...
   *
-  * The issued Schedule times out if the next target-point is missed.  eg. in
+  * The issued Schedule times out if the next deadline is missed.  eg. in
   * the above example, the Schedule that targets the 10s mark will include a
-  * timeout for if the 15s mark is missed.
+  * timeout for if the 15s mark is missed.  Note, however, that it is still
+  * possible to complete a Schedule, even if it didn't timeout:
+  *
+  * Completing a Schedule after the targeted deadline re-issues a new Schedule
+  * targeting the next valid deadline, keeping the deadlines on the original
+  * latice.  eg - if the 5s deadline was completed at 6s, then the issued
+  * Schedule will not be delayed at all, and the timeout set to 4 seconds (10s
+  * - 6s), rather the 5s.
+  *
+  * Furthermore, if any interim deadlines are missed, then
+  * they are ignoruad.  eg - if the 5s deadline was completed at 12s, then the
+  * issued Schedule will not be delayed, and the timeout will be set to 3
+  * seconds (15s - 12s)
   */
 case class Each(interval: FiniteDuration) extends Target {
 
@@ -52,30 +64,30 @@ case class Each(interval: FiniteDuration) extends Target {
 
   case class Schedule(
       val delay: FiniteDuration,
-      val issuedAt: LocalDateTime,
-      val targetTimePoint: LocalDateTime) extends ScheduleInfo {
-
-    val timeout = diff(issuedAt, targetTimePoint) min interval
-  }
+      val timeout: FiniteDuration,
+      val deadline: LocalDateTime) extends ScheduleInfo
 
   /** start immediately **/
   def start(now: LocalDateTime) = Schedule(
     delay = Duration.Zero,
-    issuedAt = now,
-    targetTimePoint = now + interval)
+    timeout = interval,
+    deadline = now + interval)
 
   def completed(previous: Schedule, now: LocalDateTime) = {
 
-    diff(now, previous.targetTimePoint) match {
-      case delta if delta >= Duration.Zero => Schedule(
-        delay = delta,
-        issuedAt = now,
-        targetTimePoint = previous.targetTimePoint + interval)
-      case delta if delta < Duration.Zero => Schedule(
-        delay = Duration.Zero,
-        issuedAt = now,
-        targetTimePoint = previous.targetTimePoint + Math.round(-delta/interval + 0.5) * interval)
+    val delta = diff(now, previous.deadline)
+    val deadline = delta match {
+      case delta if delta >= Duration.Zero =>
+        previous.deadline + interval
+      case delta if delta < Duration.Zero =>
+        previous.deadline + Math.round(-delta/interval + 0.5) * interval
     }
+
+    Schedule(
+      delay = delta max Duration.Zero,
+      timeout = diff(now, deadline) min interval,
+      deadline = deadline
+    )
   }
 
   def timedOut(previous: Schedule, now: LocalDateTime) = ???
