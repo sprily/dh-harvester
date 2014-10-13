@@ -8,8 +8,6 @@ import akka.actor.ActorLogging
 import akka.actor.Props
 import akka.actor.ReceiveTimeout
 
-import org.joda.{time => joda}
-
 import network.Device
 
 class PollingActor[D <: Device](

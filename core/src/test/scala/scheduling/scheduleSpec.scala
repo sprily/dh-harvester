@@ -47,8 +47,8 @@ object ScheduleSpec extends Specification with ScalaCheck
     val init: State = (s.startAt(baseTime), baseTime)
 
     val accumulate = { (prev: State, delta: FiniteDuration) =>
-      val (prevTarget, then) = prev
-      val now = then + delta
+      val (prevTarget, prevDT) = prev
+      val now = prevDT + delta
       (s.completedAt(prevTarget, now), now)
     }
 
