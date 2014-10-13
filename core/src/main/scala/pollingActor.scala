@@ -23,38 +23,38 @@ class PollingActor[D <: Device](
   private implicit val dispatcher =  context.system.dispatcher
   private val scheduler = context.system.scheduler
 
-  private var schedule: req.target.Schedule = _
+  private var target: req.schedule.Target = _
 
   def receive = {
 
     case StartActor => {
       log.debug(s"Starting PollingActor: ${self}")
-      schedule = req.target.start
+      target = req.schedule.start
       scheduleAgain()
     }
 
     case PollNow(timeout: FiniteDuration) => {
       log.debug(s"Polling device ${req.device}")
-      context.setReceiveTimeout(schedule.timeout)
+      context.setReceiveTimeout(target.timeoutAt.timeLeft)
       gateway ! pollMsg
     }
 
     case ReceiveTimeout => {
       log.warning(s"Timed-out out waiting for response from ${req.device}")
-      schedule = req.target.timedOut(schedule)
+      target = req.schedule.timedOut(target)
       throw new PollingTimedOutException()
     }
 
     case PollResult(ts) => {
       log.debug(s"Received PollResult from gateway: ${ts}")
       // TODO: send this result somewhere
-      schedule = req.target.completed(schedule)
+      target = req.schedule.completed(target)
       scheduleAgain()
     }
   }
 
   private def scheduleAgain(): Unit = {
-    scheduleIn(schedule.delay, schedule.timeout)
+    scheduleIn(target.initiateAt.timeLeft, target.timeoutAt.timeLeft)
   }
 
   private def scheduleIn(duration: FiniteDuration, timeout: FiniteDuration) = {

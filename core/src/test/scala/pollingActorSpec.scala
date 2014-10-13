@@ -15,6 +15,7 @@ import org.specs2.mutable.SpecificationLike
 
 import network.Device
 import network.DeviceId
+import scheduling.Schedule
 
 class PollingActorSpec extends TestKit(ActorSystem("test-system"))
                           with SpecificationLike {
@@ -57,9 +58,9 @@ class PollingActorSpec extends TestKit(ActorSystem("test-system"))
               (implicit context: ActorContext) = context.actorSelection("does-not-exist")
   }
 
-  private def request(t: Target) = PersistentRequest[fakeDevice.type](
+  private def request(s: Schedule) = PersistentRequest[fakeDevice.type](
     id = 1L,
-    target = t,
+    schedule = s,
     device = fakeDevice,
     selection = fakeDevice.selection)
 
