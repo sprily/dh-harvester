@@ -11,9 +11,9 @@ trait Schedule {
 
   type Target <: TargetLike
 
-  protected[scheduling] def startAt(now: Instant): Target
-  protected[scheduling] def completedAt(previous: Target, now: Instant): Target
-  protected[scheduling] def timedOutAt(previous: Target, now: Instant): Target
+  def startAt(now: Instant): Target
+  def completedAt(previous: Target, now: Instant): Target
+  def timedOutAt(previous: Target, now: Instant): Target
 
   /* derived methods */
   def start(): Target = startAt(now())

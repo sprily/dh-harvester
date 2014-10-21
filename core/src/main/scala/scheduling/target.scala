@@ -11,11 +11,11 @@ trait TargetLike {
   def initialDelay(): FiniteDuration = initialDelayFrom(Instant.now())
   def timeoutDelay(): FiniteDuration = timeoutDelayFrom(Instant.now())
 
-  protected[scheduling] def initialDelayFrom(now: Instant) = {
+  def initialDelayFrom(now: Instant) = {
     initiateAt.timeLeftAt(now) max Duration.Zero
   }
 
-  protected[scheduling] def timeoutDelayFrom(now: Instant) = {
+  def timeoutDelayFrom(now: Instant) = {
     timeoutAt.timeLeftAt(now) max Duration.Zero
   }
 }
