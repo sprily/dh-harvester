@@ -10,10 +10,7 @@ case class Union(s1: Schedule, s2: Schedule) extends Schedule {
       val initiateAt: Deadline,
       val timeoutAt: Deadline,
       val targets: (s1.Target, s2.Target),
-      val chosen: (Option[s1.Target], Option[s2.Target])) extends TargetLike {
-
-    require(chosen._1 != None || chosen._2 != None)
-  }
+      val chosen: Or[s1.Target, s2.Target]) extends TargetLike
 
   override def startAt(now: Instant) = {
     val t1 = s1.startAt(now)
@@ -24,7 +21,7 @@ case class Union(s1: Schedule, s2: Schedule) extends Schedule {
   override def completedAt(previous: Target, now: Instant) = {
 
     val (t1, t2) = previous.chosen match {
-      case (Some(t1), None) =>
+      case Fst(t1) =>
         val newT1 = s1.completedAt(t1, now)
         val t2 = previous.targets._2
         val newT2 = t2.initiateAt - now match {
@@ -33,7 +30,7 @@ case class Union(s1: Schedule, s2: Schedule) extends Schedule {
         }
         (newT1, newT2)
 
-      case (None, Some(t2)) =>
+      case Snd(t2) =>
         val newT2 = s2.completedAt(t2, now)
         val t1 = previous.targets._1
         val newT1 = t1.initiateAt - now match {
@@ -42,7 +39,7 @@ case class Union(s1: Schedule, s2: Schedule) extends Schedule {
         }
         (newT1, newT2)
 
-      case (Some(t1), Some(t2)) =>
+      case Both(t1,t2) =>
         (s1.completedAt(t1, now),
          s2.completedAt(t2, now))
     }
@@ -52,24 +49,29 @@ case class Union(s1: Schedule, s2: Schedule) extends Schedule {
 
   override def timedOutAt(previous: Target, now: Instant) = ???
 
-  private def target(t1: s1.Target, t2: s2.Target) = (t1.initiateAt, t2.initiateAt) match {
-    case (init1, init2) if init1 < init2 =>
-      Target(
-        initiateAt = t1.initiateAt,
-        timeoutAt  = t1.timeoutAt min t2.initiateAt,
-        targets    = (t1, t2),
-        chosen     = (Some(t1), None))
-    case (init1, init2) if init1 > init2 =>
-      Target(
-        initiateAt = t2.initiateAt,
-        timeoutAt  = t2.timeoutAt min t1.initiateAt,
-        targets    = (t1, t2),
-        chosen     = (None, Some(t2)))
-    case (init1, init2) if init1 == init2 =>
-      Target(
-        initiateAt = t1.initiateAt,
-        timeoutAt  = t1.timeoutAt min t2.timeoutAt,
-        targets    = (t1, t2),
-        chosen     = (Some(t1), Some(t2)))
+  private def target(t1: s1.Target, t2: s2.Target) = {
+
+    val initiateAt = t1.initiateAt min t2.initiateAt
+    val targets    = (t1, t2)
+
+    val (timeoutAt, chosen) = (t1.initiateAt, t2.initiateAt) match {
+
+      case (init1, init2) if init1 < init2 =>
+        (t1.timeoutAt min t2.initiateAt, Fst(t1))
+
+      case (init1, init2) if init1 > init2 =>
+        (t2.timeoutAt min t1.initiateAt, Snd(t2))
+
+      case (init1, init2) if init1 == init2 =>
+        (t1.timeoutAt min t2.timeoutAt, Both(t1, t2))
+    }
+
+    Target(initiateAt, timeoutAt, targets, chosen)
   }
 }
+
+/** Non-exclusive disjunction **/
+sealed trait Or[+T1, +T2]
+case class Fst[T](t: T) extends Or[T,Nothing]
+case class Snd[T](t: T) extends Or[Nothing,T]
+case class Both[T1,T2](t1: T1, t2: T2) extends Or[T1,T2]
