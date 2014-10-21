@@ -42,7 +42,7 @@ class DelaySpec extends Specification with ScalaCheck
     }
 
     "delay of zero is equal to the underlying schedule" in {
-      implicit val schedules = Arbitrary(ScheduleGen.schedules)
+      implicit val schedules = Arbitrary(Gen.sized(sz => ScheduleGen.all(sz)))
       implicit val completions = Arbitrary(FDGen.choose(0.seconds, 60.seconds))
       prop {
         (s: Schedule, completionTimes: Seq[FiniteDuration]) => {
@@ -57,8 +57,10 @@ class DelaySpec extends Specification with ScalaCheck
     }
 
     "generate meaningful Targets" in {
-      implicit val FDs: Gen[FiniteDuration] = FDGen.choose(0.seconds, 60.seconds)
-      implicit val schedules = ScheduleGen.delay(FDs, ScheduleGen.schedules)
+      val FDs = FDGen.choose(0.seconds, 60.seconds)
+      implicit val arbFDs = Arbitrary(FDs)
+      implicit val primitives = ScheduleGen.primitives
+      implicit val schedules = Arbitrary(Gen.sized(sz => ScheduleGen.delay(FDs, sz)))
       ScheduleSpec.meaningfulTargetProperty
     }
 

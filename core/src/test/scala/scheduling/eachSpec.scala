@@ -69,11 +69,11 @@ class EachSpec extends Specification with ScalaCheck
     }
 
     "generate meaningful Targets" in {
-      implicit val FDs: Gen[FiniteDuration] = FDGen.choose(0.seconds, 60.seconds)
-      implicit val schedules = for {
+      implicit val FDs = Arbitrary(FDGen.choose(0.seconds, 60.seconds))
+      implicit val schedules = Arbitrary(for {
         interval <- FDGen.choose(0.seconds, 10.seconds)
         if interval > Duration.Zero
-      } yield Schedule.each(interval)
+      } yield Schedule.each(interval))
       ScheduleSpec.meaningfulTargetProperty
     }
 

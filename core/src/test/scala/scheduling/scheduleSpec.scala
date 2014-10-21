@@ -15,12 +15,8 @@ import org.specs2.matcher.Parameters
 object ScheduleSpec extends Specification with ScalaCheck
                                           with HideDurationImplicits {
 
-  def meaningfulTargetProperty(implicit schedules: Gen[Schedule],
-                                        completionTimes: Gen[FiniteDuration]) = {
-
-    implicit val arbS  = Arbitrary(schedules)
-    implicit val arbFD = Arbitrary(completionTimes)
-
+  def meaningfulTargetProperty(implicit schedules: Arbitrary[Schedule],
+                                        completionTimes: Arbitrary[FiniteDuration]) = {
     prop {
       (s: Schedule, completionTimes: Seq[FiniteDuration]) => {
 

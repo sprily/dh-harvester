@@ -29,9 +29,11 @@ object Schedule {
 
   def each(interval: FiniteDuration): Schedule = Each(interval)
   def delay(schedule: Schedule, delay: FiniteDuration): Schedule = Delay(schedule, delay)
+  def union(s1: Schedule, s2: Schedule): Schedule = Union(s1,s2)
 
   implicit class ScheduleOps(s: Schedule) {
     def delayBy(delay: FiniteDuration) = Schedule.delay(s, delay)
+    def unionWith(s2: Schedule) = Schedule.union(s, s2)
   }
 
 }

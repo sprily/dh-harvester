@@ -19,22 +19,57 @@ trait CommonGenerators {
 
   object ScheduleGen {
 
-    def schedules: Gen[Schedule] = Gen.oneOf(
-      each(FDGen.choose(0.seconds, 10.seconds)),
-      delay(FDGen.choose(0.seconds, 10.seconds),
-            Gen.lzy(schedules))
-    )
+    def primitives = each(FDGen.choose(0.seconds, 60.seconds))
+
+    def all(depth: Int): Gen[Schedule] = {
+
+      def nextSchedule() = Gen.frequency(
+        4 -> primitives,
+        4 -> delay(FDGen.choose(0.seconds, 10.seconds), depth-1)(Gen.lzy(all(depth-1))),
+        1 -> union(depth-1)(Gen.lzy(all(depth-1)))
+      )
+
+      if (depth <= 0) primitives else nextSchedule()
+    }
+
+    def delay(delays: Gen[FiniteDuration], depth: Int)
+             (implicit others: Gen[Schedule]): Gen[Schedule] = {
+
+      def nextSchedule(): Gen[Schedule] = Gen.frequency(
+        1 -> Gen.lzy(delay(delays, depth-1)),
+        1 -> others
+      )
+
+      depth match {
+        case 0 => others
+        case _ => for {
+          delay <- delays
+          sch   <- nextSchedule()
+        } yield Schedule.delay(sch, delay)
+      }
+    }
+
+    def union(depth: Int)
+             (implicit others: Gen[Schedule]): Gen[Schedule] = {
+
+      def nextSchedule() = Gen.frequency(
+        1  -> Gen.lzy(union(depth-1)),
+        4  -> others
+      )
+
+      depth match {
+        case 0 => others
+        case _ => for {
+          left <- nextSchedule()
+          right <- nextSchedule()
+        } yield Schedule.union(left, right)
+      }
+    }
 
     def each(intervals: Gen[FiniteDuration]): Gen[Schedule] = for {
       interval <- intervals
       if interval > Duration.Zero
     } yield Schedule.each(interval)
-
-    def delay(delays: Gen[FiniteDuration],
-              schedulers: Gen[Schedule]): Gen[Schedule] = for {
-      delay <- delays
-      scheduler <- schedulers
-    } yield Schedule.delay(scheduler, delay)
 
   }
 
