@@ -21,47 +21,51 @@ object ScheduleSpec extends Specification with ScalaCheck
       (s: Schedule, completionTimes: Seq[FiniteDuration]) => {
 
         val baseTime = Instant.now()
-        val states = runSchedule(baseTime)(completionTimes)(s)
+        val trace = traceExecutionInfo(baseTime)(completionTimes)(s)
 
-        type State = (s.Target, Instant)
-        states must contain { state: State =>
-          val (target, dt) = state
-          (target.initialDelayFrom(dt) must beGreaterThanOrEqualTo(Duration.Zero)) and
-          (target.timeoutDelayFrom(dt) must beGreaterThan(target.initialDelayFrom(dt)))
+        trace must contain { m: MomentInfo =>
+          (m.measuredDelay must beGreaterThanOrEqualTo(Duration.Zero)) and
+          (m.measuredTimeout must beGreaterThan(m.measuredDelay))
         }.foreach
 
       }
     }
   }
 
-  def runSchedule[S <: Schedule]
-                 (baseTime: Instant)
-                 (completionTimes: Seq[FiniteDuration])
-                 (s: S): Seq[(s.Target, Instant)] = {
-    
-    type State = (s.Target, Instant)
-    val init: State = (s.startAt(baseTime), baseTime)
+  case class Moment[T <: Schedule#Target](time: Instant, target: T)
 
-    val accumulate = { (prev: State, delta: FiniteDuration) =>
-      val (prevTarget, prevDT) = prev
-      val now = prevDT + delta
-      (s.completedAt(prevTarget, now), now)
+  case class MomentInfo(time: Instant, target: TargetInfo) {
+    val measuredDelay = target.initialDelayFrom(time)
+    val measuredTimeout = target.timeoutDelayFrom(time)
+  }
+
+  case class TargetInfo(
+      val initiateAt: Deadline,
+      val timeoutAt: Deadline) extends TargetLike
+
+  def traceExecution[S <: Schedule]
+                    (baseTime: Instant)
+                    (completionTimes: Seq[FiniteDuration])
+                    (s: S): Seq[Moment[s.Target]] = {
+
+    val init = Moment(baseTime, s.startAt(baseTime))
+
+    val accumulate = { (prev: Moment[s.Target], delta: FiniteDuration) =>
+      val now = prev.time + delta
+      Moment(now, s.completedAt(prev.target, now))
     }
 
     completionTimes.scanLeft(init)(accumulate)
   }
 
-  def runScheduleNormalized(baseTime: Instant)
-                           (completionTimes: Seq[FiniteDuration])
-                           (s: Schedule): Seq[(TargetInfo, Instant)] = {
-    type State = (s.Target, Instant)
-    runSchedule(baseTime)(completionTimes)(s).map { case state: State =>
-      val (target, dt) = state
-      (TargetInfo(target.initiateAt, target.timeoutAt), dt)
+  def traceExecutionInfo(baseTime: Instant)
+                        (completionTimes: Seq[FiniteDuration])
+                        (s: Schedule): Seq[MomentInfo] = {
+    traceExecution(baseTime)(completionTimes)(s).map { moment =>
+      MomentInfo(moment.time, TargetInfo(moment.target.initiateAt,
+                                         moment.target.timeoutAt))
     }
   }
 }
 
-case class TargetInfo(
-    initialDelay: Instant,
-    timeoutDelay: Instant)
+

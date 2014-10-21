@@ -47,7 +47,7 @@ class DelaySpec extends Specification with ScalaCheck
       prop {
         (s: Schedule, completionTimes: Seq[FiniteDuration]) => {
           val delayedSchedule = s.delayBy(0.seconds)
-          val runner = ScheduleSpec.runScheduleNormalized(Instant.now())(completionTimes) _
+          val runner = ScheduleSpec.traceExecutionInfo(Instant.now())(completionTimes) _
           val withoutDelay = runner(s)
           val withDelay    = runner(delayedSchedule)
 
