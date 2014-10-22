@@ -1,13 +1,14 @@
 package uk.co.sprily.dh
 package harvester
 
+import scala.language.reflectiveCalls
+
 import scala.concurrent.duration._
 
 import akka.actor.ActorContext
 import akka.actor.ActorSelection
-import akka.actor.ActorSystem
-import akka.testkit.TestKit
 import akka.testkit.TestActorRef
+import akka.testkit.TestKit
 
 import org.joda.{time => joda}
 
@@ -17,52 +18,68 @@ import network.Device
 import network.DeviceId
 import scheduling.Schedule
 
-class PollingActorSpec extends TestKit(ActorSystem("test-system"))
-                          with SpecificationLike {
+class PollingActorSpec extends SpecificationLike
+                          with HideDurationImplicits {
 
-  //override def intToRichLong(v: Int) = super.intToRichLong(v)
+  "A PollingActor" should {
 
-  //"A PollingActor" should {
-  //  "send a poll message to the device at startup" in {
-  //    //val underTest = TestActorRef(
-  //    //  new PollingActor[fakeDevice.type](
-  //    //    request(Every(3.seconds, grace=5.seconds)),
-  //    //    fakeDeviceDirectory
-  //    //  )
-  //    //).underlyingActor
+    "Poll the device" in new PollingActorContext {
 
-  //    "Hello" must have size(5)
+      val underTest = TestActorRef(
+        new PollingActor[fakeDevice.type](
+          request(Schedule.each(3.seconds)),
+          deviceDirectory
+        )
+      )
 
-  //    //val pollSentAt = new joda.LocalDateTime(2014, 9, 1, 13, 30, 4)
-  //    //val now        = new joda.LocalDateTime(2014, 9, 1, 13, 30, 5)
+      underTest ! PollingActor.Protocol.StartActor
+      underTest ! PollingActor.Protocol.PollNow
 
-  //    //underTest.durationUntilNextPoll(pollSentAt, now) === (Some(2.seconds))
-  //  }
-  //}
+      expectMsgType[Poll] must === (pollMsg)
+    }
 
-  //val fakeDevice = new Device {
-  //  trait Address
-  //  trait AddressSelection
+    "Send results to <somewhere>" in new PollingActorContext {
+      (pending)
+    }
 
-  //  val id = DeviceId(1L)
-  //  val address = new Address {}
+    "Throw an exception when a timeout is hit" in new PollingActorContext {
+      (pending)
+    }
+  }
 
-  //  val selection = new AddressSelection {}
-  //}
-
-  //val fakeDeviceDirectory = new DeviceDirectoryService[fakeDevice.type] {
-  //  trait Protocol extends DeviceActorProtocol[fakeDevice.type]
-  //  val Protocol = new Protocol {}
-
-  //  def lookup(device: fakeDevice.type)
-  //            (implicit context: ActorContext) = context.actorSelection("does-not-exist")
-  //}
-
-  //private def request(s: Schedule) = PersistentRequest[fakeDevice.type](
-  //  id = 1L,
-  //  schedule = s,
-  //  device = fakeDevice,
-  //  selection = fakeDevice.selection)
 
 }
 
+class PollingActorContext extends AkkaSpecs2Support {
+
+  // for brevity
+  type TestDevice = fakeDevice.type
+  type Poll = deviceDirectory.Protocol.Poll
+
+  lazy val fakeDevice = new Device {
+    trait Address
+    trait AddressSelection
+
+    val id = DeviceId(1L)
+    val address = new Address {}
+    val selection = new AddressSelection {}
+  }
+
+  def request(s: Schedule) = PersistentRequest[TestDevice](
+    id = 1L,
+    schedule = s,
+    device = fakeDevice,
+    selection = fakeDevice.selection)
+
+  lazy val deviceDirectory = new DeviceActorDirectoryService[TestDevice] {
+    def lookup(device: TestDevice)
+              (implicit context: ActorContext) = {
+      context.actorSelection(testActor.path)
+    }
+  }
+
+  lazy val pollMsg = deviceDirectory.Protocol.Poll(
+    fakeDevice,
+    fakeDevice.selection
+  )
+}

@@ -9,12 +9,11 @@ import org.joda.{time => joda}
 import network.Device
 
 trait DeviceActorDirectoryService[D <: Device] {
-  val Protocol: DeviceActorProtocol[D]
+
+  object Protocol {
+    case class Poll(d: D, selection: D#AddressSelection)
+    case class PollResult(timestamp: joda.LocalDateTime)
+  }
 
   def lookup(device: D)(implicit context: ActorContext): ActorSelection
-}
-
-trait DeviceActorProtocol[D <: Device] {
-  case class Poll(d: D, selection: D#AddressSelection)
-  case class PollResult(timestamp: joda.LocalDateTime)
 }

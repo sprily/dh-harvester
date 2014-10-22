@@ -16,57 +16,68 @@ class PollingActor[D <: Device](
                                                  with ActorLogging {
 
   import PollingActor._
+  import PollingActor.Protocol._
   import directory.Protocol._
 
+  // Type alias for convenience, it's still path dependent
+  type Target = req.schedule.Target
+
+  // akka stuff
   private implicit val dispatcher =  context.system.dispatcher
   private val scheduler = context.system.scheduler
 
-  private var target: req.schedule.Target = _
+  // our actor's state
+  private var currentTarget: Option[Target] = None
 
   def receive = {
+    case StartActor       => startActorRcvd()
+    case PollNow          => pollNowRcvd()
+    case ReceiveTimeout   => receiveTimeoutRcvd()
+    case m@PollResult(ts) => pollResultRcvd(m)
+  }
 
-    case StartActor => {
-      log.debug(s"Starting PollingActor: ${self}")
-      target = req.schedule.start
-      scheduleAgain()
-    }
+  /* Responses to messages */
 
-    case PollNow(timeout: FiniteDuration) => {
-      log.debug(s"Polling device ${req.device}")
-      context.setReceiveTimeout(target.timeoutAt.timeLeft)
+  def startActorRcvd() = {
+    log.debug(s"Starting PollingActor: ${self}")
+    currentTarget = Some(req.schedule.start())
+    schedulePollFor(currentTarget.get)
+  }
+
+  def pollNowRcvd() = {
+    log.debug(s"Polling device ${req.device}")
+    currentTarget.foreach { target =>
+      context.setReceiveTimeout(target.timeoutDelay())
       gateway ! pollMsg
     }
+  }
 
-    case ReceiveTimeout => {
-      log.warning(s"Timed-out out waiting for response from ${req.device}")
-      target = req.schedule.timedOut(target)
-      throw new PollingTimedOutException()
-    }
-
-    case PollResult(ts) => {
-      log.debug(s"Received PollResult from gateway: ${ts}")
-      // TODO: send this result somewhere
-      target = req.schedule.completed(target)
-      scheduleAgain()
+  def pollResultRcvd(m: PollResult) = {
+    log.debug(s"Received PollResult from gateway: ${m.timestamp}")
+    // TODO: send this result somewhere
+    currentTarget.foreach { target =>
+      currentTarget = Some(req.schedule.completed(target))
+      schedulePollFor(target)
     }
   }
 
-  private def scheduleAgain(): Unit = {
-    scheduleIn(target.initiateAt.timeLeft, target.timeoutAt.timeLeft)
+  def receiveTimeoutRcvd() = {
+    log.warning(s"Timed-out out waiting for response from ${req.device}")
+    currentTarget.foreach { target =>
+      currentTarget = Some(req.schedule.timedOut(target))
+    }
+    throw new PollingTimedOutException()
   }
 
-  private def scheduleIn(duration: FiniteDuration, timeout: FiniteDuration) = {
-    scheduler.scheduleOnce(duration, self, PollNow(timeout))
+  /* Helper methods */
+
+  private def schedulePollFor(target: Target): Unit = {
+    scheduler.scheduleOnce(target.initialDelay(), self, PollNow)
   }
 
   private def gateway = directory.lookup(req.device)
 
   private val pollMsg = Poll(req.device, req.selection)
-
-  sealed trait Protocol
-  case object StartActor extends Protocol
-  case class PollNow(timeout: FiniteDuration) extends Protocol
-  
 }
 
 object PollingActor {
@@ -79,4 +90,10 @@ object PollingActor {
   }
 
   class PollingTimedOutException extends Exception
+
+  object Protocol {
+    case object StartActor
+    case object PollNow
+  }
+  
 }

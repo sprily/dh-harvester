@@ -1,6 +1,5 @@
 package uk.co.sprily.dh
 package harvester
-package scheduling
 
 import org.specs2.time.TimeConversions
 
