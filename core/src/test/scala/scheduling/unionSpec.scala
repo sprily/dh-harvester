@@ -8,12 +8,13 @@ import org.scalacheck.Arbitrary
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
 
-import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
+import org.specs2.mutable.Specification
 import org.specs2.matcher.Parameters
+import org.specs2.time.NoTimeConversions
 
 class UnionSpec extends Specification with ScalaCheck
-                                      with HideDurationImplicits
+                                      with NoTimeConversions
                                       with CommonGenerators {
 
   "Union" should {

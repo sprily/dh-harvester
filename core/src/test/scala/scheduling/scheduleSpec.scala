@@ -8,12 +8,13 @@ import org.scalacheck.Arbitrary
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
 
-import org.specs2.mutable.Specification
 import org.specs2.ScalaCheck
+import org.specs2.mutable.Specification
 import org.specs2.matcher.Parameters
+import org.specs2.time.NoTimeConversions
 
 object ScheduleSpec extends Specification with ScalaCheck
-                                          with HideDurationImplicits {
+                                          with NoTimeConversions {
 
   def meaningfulTargetProperty(implicit schedules: Arbitrary[Schedule],
                                         completionTimes: Arbitrary[FiniteDuration]) = {

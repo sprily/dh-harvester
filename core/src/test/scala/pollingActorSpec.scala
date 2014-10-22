@@ -13,13 +13,14 @@ import akka.testkit.TestKit
 import org.joda.{time => joda}
 
 import org.specs2.mutable.SpecificationLike
+import org.specs2.time.NoTimeConversions
 
 import network.Device
 import network.DeviceId
 import scheduling.Schedule
 
 class PollingActorSpec extends SpecificationLike
-                          with HideDurationImplicits {
+                          with NoTimeConversions {
 
   "A PollingActor" should {
 
