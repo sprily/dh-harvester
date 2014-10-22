@@ -8,9 +8,8 @@ import org.joda.{time => joda}
 
 import network.Device
 
-trait DeviceDirectoryService[D <: Device] {
-  type Protocol <: DeviceActorProtocol[D]
-  val Protocol: Protocol
+trait DeviceActorDirectoryService[D <: Device] {
+  val Protocol: DeviceActorProtocol[D]
 
   def lookup(device: D)(implicit context: ActorContext): ActorSelection
 }
