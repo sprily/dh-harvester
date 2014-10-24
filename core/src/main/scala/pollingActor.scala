@@ -12,7 +12,8 @@ import network.Device
 
 class PollingActor[D <: Device](
     val req: PersistentRequest[D],
-    val directory: DeviceActorDirectoryService[D]) extends Actor
+    val directory: DeviceActorDirectoryService[D],
+    val bus: DeviceBus) extends Actor
                                                  with ActorLogging {
 
   import PollingActor._
@@ -33,7 +34,7 @@ class PollingActor[D <: Device](
     case StartActor       => startActorRcvd()
     case PollNow          => pollNowRcvd()
     case ReceiveTimeout   => receiveTimeoutRcvd()
-    case m@PollResult(ts) => pollResultRcvd(m)
+    case r@Result(_,_)    => resultRcvd(r)
   }
 
   /* Responses to messages */
@@ -52,9 +53,9 @@ class PollingActor[D <: Device](
     }
   }
 
-  def pollResultRcvd(m: PollResult) = {
-    log.debug(s"Received PollResult from gateway: ${m.timestamp}")
-    // TODO: send this result somewhere
+  def resultRcvd(r: Result) = {
+    log.debug(s"Received PollResult from gateway: ${r.timestamp}")
+    bus.publish(req.device.Reading(r.timestamp, r.measurement))
     currentTarget.foreach { target =>
       currentTarget = Some(req.schedule.completed(target))
       schedulePollFor(target)
@@ -83,9 +84,10 @@ class PollingActor[D <: Device](
 object PollingActor {
 
   def props[D <: Device](req: PersistentRequest[D])
-                        (implicit directory: DeviceActorDirectoryService[D]): Props = {
+                        (implicit directory: DeviceActorDirectoryService[D],
+                                  bus: DeviceBus): Props = {
 
-    Props(new PollingActor[D](req, directory))
+    Props(new PollingActor[D](req, directory, bus))
 
   }
 
