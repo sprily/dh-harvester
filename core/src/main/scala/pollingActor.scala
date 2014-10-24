@@ -14,7 +14,7 @@ class PollingActor[D <: Device](
     val req: PersistentRequest[D],
     val directory: DeviceActorDirectoryService[D],
     val bus: DeviceBus) extends Actor
-                                                 with ActorLogging {
+                           with ActorLogging {
 
   import PollingActor._
   import PollingActor.Protocol._
@@ -54,8 +54,10 @@ class PollingActor[D <: Device](
   }
 
   def resultRcvd(r: Result) = {
+    import network.Reading
     log.debug(s"Received PollResult from gateway: ${r.timestamp}")
-    bus.publish(req.device.Reading(r.timestamp, r.measurement))
+    val reading = Reading(r.timestamp, req.device, r.measurement)
+    bus.publish(reading)
     currentTarget.foreach { target =>
       currentTarget = Some(req.schedule.completed(target))
       schedulePollFor(target)

@@ -18,6 +18,7 @@ import org.specs2.time.NoTimeConversions
 
 import network.Device
 import network.DeviceId
+import network.Reading
 import scheduling.Schedule
 
 class PollingActorSpec extends SpecificationLike
@@ -39,7 +40,7 @@ class PollingActorSpec extends SpecificationLike
       val underTest = pollingActor
       underTest ! deviceDirectory.Protocol.Result(dt, measurement)
 
-      val expected = List(fakeDevice.Reading(
+      val expected = List(Reading[fakeDevice.type](
         dt, fakeDevice, measurement))
       
       fakeDeviceBus.readings must === (expected)
@@ -90,9 +91,9 @@ class PollingActorContext extends AkkaSpecs2Support {
 
   lazy val fakeDeviceBus = new DeviceBus {
 
-    var readings = List[Device#Reading]()
+    var readings = List[Reading[Device]]()
 
-    def publish(r: Device#Reading) = readings = r :: readings
+    def publish(r: Reading[Device]) = readings = r :: readings
     def subscribe(subscriber: ActorRef, device: Device): Boolean = ???
     def unsubscribe(subscriber: ActorRef, from: Device): Boolean = ???
     def unsubscribe(subscriber: ActorRef): Unit = ???

@@ -24,15 +24,11 @@ trait Device { self =>
     */
   type Measurement
 
-  case class Reading(
-      val timestamp: LocalDateTime,
-      val device: Device,
-      val measurement: Device#Measurement)
-
-  object Reading {
-    def apply(t: LocalDateTime, m: Device#Measurement): Reading = Reading(t, self, m)
-  }
-
   def id: DeviceId
   def address: Address
 }
+
+case class Reading[+D <: Device](
+    val timestamp: LocalDateTime,
+    val device: D,
+    val measurement: D#Measurement)

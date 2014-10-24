@@ -2,13 +2,14 @@ package uk.co.sprily.dh
 package harvester
 
 import network.Device
+import network.Reading
 
 import akka.actor.ActorRef
 import akka.event.EventBus
 import akka.event.LookupClassification
 
 trait DeviceBus {
-  def publish(reading: Device#Reading): Unit
+  def publish(reading: Reading[Device]): Unit
   def subscribe(subscriber: ActorRef, device: Device): Boolean
   def unsubscribe(subscriber: ActorRef, from: Device): Boolean
   def unsubscribe(subscriber: ActorRef): Unit
@@ -17,7 +18,7 @@ trait DeviceBus {
 class AkkaDeviceBus extends DeviceBus
                        with EventBus with LookupClassification {
 
-  type Event = Device#Reading
+  type Event = Reading[Device]
   type Classifier = Device
   type Subscriber = ActorRef
    
