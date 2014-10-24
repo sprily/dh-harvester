@@ -26,13 +26,7 @@ class PollingActorSpec extends SpecificationLike
 
     "Poll the device" in new PollingActorContext {
 
-      val underTest = TestActorRef(
-        new PollingActor[fakeDevice.type](
-          request(Schedule.each(3.seconds)),
-          deviceDirectory
-        )
-      )
-
+      val underTest = pollingActor
       underTest ! PollingActor.Protocol.StartActor
       underTest ! PollingActor.Protocol.PollNow
 
@@ -47,7 +41,6 @@ class PollingActorSpec extends SpecificationLike
       (pending)
     }
   }
-
 
 }
 
@@ -83,4 +76,12 @@ class PollingActorContext extends AkkaSpecs2Support {
     fakeDevice,
     fakeDevice.selection
   )
+
+  def pollingActor = TestActorRef(
+    new PollingActor[fakeDevice.type](
+      request(Schedule.each(3.seconds)),
+      deviceDirectory
+    )
+  )
+
 }
