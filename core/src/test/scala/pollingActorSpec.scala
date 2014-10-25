@@ -92,9 +92,12 @@ class PollingActorContext extends AkkaSpecs2Support {
 
     var readings = List[Reading[Device]]()
 
-    def publish(r: Reading[Device]) = readings = r :: readings
-    def subscribe(subscriber: ActorRef, device: Device): Boolean = ???
-    def unsubscribe(subscriber: ActorRef, from: Device): Boolean = ???
+    def publish[D <: Device](r: Reading[D]) = {
+      readings = r.asInstanceOf[Reading[Device]] :: readings
+    }
+
+    def subscribe[D <: Device](subscriber: ActorRef, device: D): Boolean = ???
+    def unsubscribe[D <: Device](subscriber: ActorRef, from: D): Boolean = ???
     def unsubscribe(subscriber: ActorRef): Unit = ???
   }
 

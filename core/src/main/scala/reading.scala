@@ -5,7 +5,7 @@ import org.joda.time.LocalDateTime
 
 import network.Device
 
-case class Reading[+D <: Device](
+case class Reading[D <: Device](
     val timestamp: LocalDateTime,
     val device: D,
     val measurement: D#Measurement)
