@@ -18,7 +18,6 @@ import org.specs2.time.NoTimeConversions
 
 import network.Device
 import network.DeviceId
-import network.Reading
 import scheduling.Schedule
 
 class PollingActorSpec extends SpecificationLike

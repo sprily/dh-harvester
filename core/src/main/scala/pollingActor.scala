@@ -54,7 +54,6 @@ class PollingActor[D <: Device](
   }
 
   def resultRcvd(r: Result) = {
-    import network.Reading
     log.debug(s"Received PollResult from gateway: ${r.timestamp}")
     val reading = Reading(r.timestamp, req.device, r.measurement)
     bus.publish(reading)
