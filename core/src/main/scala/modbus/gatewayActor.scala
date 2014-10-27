@@ -25,15 +25,9 @@ object ConnectionActor {
 
   def gateway(gateway: TCPGateway,
               directory: DeviceActorDirectoryService[ModbusDevice],
-              minConnections: Int = 1,
-              maxConnections: Int = 4): Props = {
+              numConnections: Int = 1): Props = {
     props(gateway, directory).
-      withRouter(
-        RoundRobinPool(
-          nrOfInstances=minConnections,
-          resizer=None
-        )
-      )
+      withRouter(RoundRobinPool(numConnections))
   }
 
   private def props(gateway: TCPGateway,
@@ -50,9 +44,14 @@ class ConnectionActor(
 
   import directory.Protocol._
 
-  val conn = new TCPMasterConnection(gateway.address.inet)
-  conn.setPort(gateway.port)
-  conn.connect()
+  var conn: TCPMasterConnection = _
+
+  override def postStop() {
+    if (conn != null) {
+      conn.close()
+    }
+    conn = null
+  }
 
   def receive = {
     case p@Poll(d: ModbusDevice, registers: ModbusRegisterRange) =>
@@ -60,6 +59,9 @@ class ConnectionActor(
   }
 
   private def pollRcvd(p: Poll): Unit = {
+
+    connectIfNecessary()
+
     val req = new ReadMultipleRegistersRequest(
       p.selection.startRegister,
       p.selection.endRegister)
@@ -71,10 +73,19 @@ class ConnectionActor(
     tx.execute()  // blocking
     val res = tx.getResponse().asInstanceOf[ReadMultipleRegistersResponse]
     val results = res.getRegisters.map(_.toUnsignedShort)
-    results.foreach(println)
-    println
+    //results.foreach(println)
+    //println
 
     sender ! Result(LocalDateTime.now(), "succcess")
+  }
+
+  private def connectIfNecessary(): Unit = {
+    if (conn == null) {
+      println("Connecting")
+      conn = new TCPMasterConnection(gateway.address.inet)
+      conn.setPort(gateway.port)
+      conn.connect()
+    }
   }
 
 }
