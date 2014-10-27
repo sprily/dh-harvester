@@ -8,6 +8,7 @@ import java.io._
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.Props
+import akka.routing.RoundRobinPool
 
 import com.ghgande.j2mod.modbus._
 import com.ghgande.j2mod.modbus.msg._
@@ -19,8 +20,30 @@ import org.joda.time.LocalDateTime
 
 import harvester.network.TCPGateway
 
+
+object ConnectionActor {
+
+  def gateway(gateway: TCPGateway,
+              directory: DeviceActorDirectoryService[ModbusDevice],
+              minConnections: Int = 1,
+              maxConnections: Int = 4): Props = {
+    props(gateway, directory).
+      withRouter(
+        RoundRobinPool(
+          nrOfInstances=minConnections,
+          resizer=None
+        )
+      )
+  }
+
+  private def props(gateway: TCPGateway,
+            directory: DeviceActorDirectoryService[ModbusDevice]): Props = {
+    Props(new ConnectionActor(gateway, directory))
+  }
+}
+
 /** Manages a single connection to a modbus TCP gateway **/
-class GatewayActor(
+class ConnectionActor(
     val gateway: TCPGateway,
     directory: DeviceActorDirectoryService[ModbusDevice]) extends Actor
                                                              with ActorLogging {

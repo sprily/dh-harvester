@@ -7,9 +7,9 @@ import akka.actor.ActorSelection
 
 trait ActorDirectory extends DeviceActorDirectoryService[ModbusDevice] {
 
-  def lookup(d: ModbusDevice)
-            (implicit context: ActorContext): ActorSelection = {
-    ???
-  }
+  //def lookup(d: ModbusDevice)
+  //          (implicit context: ActorContext): ActorSelection = {
+  //  ???
+  //}
 
 }
