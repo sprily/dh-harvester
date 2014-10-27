@@ -11,8 +11,8 @@ case class ModbusDeviceAddress(
     val gateway: TCPGateway)
 
 case class ModbusRegisterRange(
-    val startRegister: Byte,
-    val endRegister: Byte)
+    val startRegister: Int,
+    val endRegister: Int)
 
 case class ModbusDevice(
     val id: DeviceId,
