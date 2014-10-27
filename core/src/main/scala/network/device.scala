@@ -2,8 +2,6 @@ package uk.co.sprily.dh
 package harvester
 package network
 
-import org.joda.time.LocalDateTime
-
 case class DeviceId(v: Long) extends AnyVal
 
 trait Device { self =>
@@ -23,15 +21,6 @@ trait Device { self =>
     * Finally, each Device produces its own `Measurement` type.
     */
   type Measurement
-
-  case class Reading(
-      val timestamp: LocalDateTime,
-      val device: Device,
-      val measurement: Device#Measurement)
-
-  object Reading {
-    def apply(t: LocalDateTime, m: Device#Measurement): Reading = Reading(t, self, m)
-  }
 
   def id: DeviceId
   def address: Address

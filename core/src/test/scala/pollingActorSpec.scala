@@ -39,7 +39,7 @@ class PollingActorSpec extends SpecificationLike
       val underTest = pollingActor
       underTest ! deviceDirectory.Protocol.Result(dt, measurement)
 
-      val expected = List(fakeDevice.Reading(
+      val expected = List(Reading[fakeDevice.type](
         dt, fakeDevice, measurement))
       
       fakeDeviceBus.readings must === (expected)
@@ -90,11 +90,14 @@ class PollingActorContext extends AkkaSpecs2Support {
 
   lazy val fakeDeviceBus = new DeviceBus {
 
-    var readings = List[Device#Reading]()
+    var readings = List[Reading[Device]]()
 
-    def publish(r: Device#Reading) = readings = r :: readings
-    def subscribe(subscriber: ActorRef, device: Device): Boolean = ???
-    def unsubscribe(subscriber: ActorRef, from: Device): Boolean = ???
+    def publish[D <: Device](r: Reading[D]) = {
+      readings = r.asInstanceOf[Reading[Device]] :: readings
+    }
+
+    def subscribe[D <: Device](subscriber: ActorRef, device: D): Boolean = ???
+    def unsubscribe[D <: Device](subscriber: ActorRef, from: D): Boolean = ???
     def unsubscribe(subscriber: ActorRef): Unit = ???
   }
 
