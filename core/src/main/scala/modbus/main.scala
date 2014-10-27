@@ -2,39 +2,50 @@ package uk.co.sprily.dh
 package harvester
 package modbus
 
-import java.net._
-import java.io._
+import akka.actor.ActorContext
+import akka.actor.ActorSelection
+import akka.actor.ActorSystem
 
-import com.ghgande.j2mod.modbus._
-import com.ghgande.j2mod.modbus.msg._
-import com.ghgande.j2mod.modbus.io._
-import com.ghgande.j2mod.modbus.net._
-import com.ghgande.j2mod.modbus.util._
+import harvester.network._
 
 
 object ModbusTest {
   def main(args: Array[String]): Unit = {
-    val conn = new TCPMasterConnection(InetAddress.getByName("localhost"))
-    conn.setPort(5020)
-    conn.connect()
 
-    val req = new ReadMultipleRegistersRequest(50520, 4)
-    req.setUnitID(1)
-    val tx = new ModbusTCPTransaction(conn)
-    tx.setRequest(req)
+    val device = ModbusDevice(
+      id=DeviceId(100L),
+      address=ModbusDeviceAddress(
+        deviceNumber=1,
+        gateway=TCPGateway(
+          address=IP4Address((127, 0, 0, 1)),
+          port=5020
+        )
+      )
+    )
 
-    (1 to 10).foreach { _ =>
-      tx.execute()
-      val res = tx.getResponse().asInstanceOf[ReadMultipleRegistersResponse]
+    println(device)
 
-      val results = res.getRegisters.map(_.toUnsignedShort)
-      results.foreach(println)
-      println
-      Thread.sleep(1000)
+    val directory = new ActorDirectory {
+      def lookup(d: ModbusDevice)
+                (implicit context: ActorContext): ActorSelection = {
+        context.actorSelection("user/modbus-gw")
+      }
     }
 
+    val system = ActorSystem("all-my-actors")
+    val gw = system.actorOf(
+      ConnectionActor.gateway(
+        device.address.gateway,
+        directory),
+      "modbus-gw"
+    )
 
-    conn.close()
+    import directory.Protocol._
+    gw ! Poll(device, ModbusRegisterRange(50520.toShort, 4))
+
+    Thread.sleep(10000)
+    system.shutdown()
+
   }
 }
 
