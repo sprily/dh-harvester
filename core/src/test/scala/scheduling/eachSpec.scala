@@ -41,8 +41,10 @@ class EachSpec extends Specification with ScalaCheck
       implicit val FD = Arbitrary(FDGen.choose(0.seconds, 6.seconds))
       prop {
         (timeToComplete: FiniteDuration) => {
-          val target = schedule.completedAt(firstTarget, baseTime + timeToComplete)
-          target.timeoutDelayFrom(baseTime) must === (6.seconds)
+          (timeToComplete < 6.seconds) ==> {
+            val target = schedule.completedAt(firstTarget, baseTime + timeToComplete)
+            target.timeoutDelayFrom(baseTime) must === (6.seconds)
+          }
         }
       }
     }
