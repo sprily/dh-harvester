@@ -29,8 +29,8 @@ class ModbusActorDirectory(system: ActorSystem) extends DeviceActorDirectoryServ
   private val mgrPath = "/user/" + mgrName
   private val mgr = system.actorOf(Props(new Manager()), mgrName)
 
-  def lookup(device: ModbusDevice)(implicit ctx: ActorContext) = {
-    ctx.actorSelection(mgrPath)
+  def lookup(device: ModbusDevice) = {
+    system.actorSelection(mgrPath)
   }
 
   class Manager extends Actor with ActorLogging {

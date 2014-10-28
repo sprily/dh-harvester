@@ -77,9 +77,8 @@ class PollingActorContext extends AkkaSpecs2Support {
     selection = fakeDevice.selection)
 
   lazy val deviceDirectory = new DeviceActorDirectoryService[TestDevice] {
-    def lookup(device: TestDevice)
-              (implicit context: ActorContext) = {
-      context.actorSelection(testActor.path)
+    def lookup(device: TestDevice) = {
+      system.actorSelection(testActor.path)
     }
   }
 

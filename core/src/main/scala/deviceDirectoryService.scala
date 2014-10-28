@@ -15,5 +15,5 @@ trait DeviceActorDirectoryService[D <: Device] {
     case class Result(timestamp: LocalDateTime, measurement: D#Measurement)
   }
 
-  def lookup(device: D)(implicit context: ActorContext): ActorSelection
+  def lookup(device: D): ActorSelection
 }
