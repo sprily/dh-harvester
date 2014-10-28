@@ -19,10 +19,10 @@ object ScheduleSpec extends Specification with ScalaCheck
   def meaningfulTargetProperty(implicit schedules: Arbitrary[Schedule],
                                         completionTimes: Arbitrary[FiniteDuration]) = {
     prop {
-      (s: Schedule, completionTimes: Seq[FiniteDuration]) => {
+      (s: Schedule, completions: Seq[(FiniteDuration, Boolean)]) => {
 
         val baseTime = Instant.now()
-        val trace = traceExecutionInfo(baseTime)(completionTimes)(s)
+        val trace = traceExecutionInfo(baseTime)(completions)(s)(chooseStep(s))
 
         trace must contain { m: MomentInfo =>
           (m.measuredDelay must beGreaterThanOrEqualTo(Duration.Zero)) and
@@ -46,27 +46,37 @@ object ScheduleSpec extends Specification with ScalaCheck
 
   def traceExecution[S <: Schedule]
                     (baseTime: Instant)
-                    (completionTimes: Seq[FiniteDuration])
-                    (s: S): Seq[Moment[s.Target]] = {
+                    (completions: Seq[(FiniteDuration, Boolean)])
+                    (s: S)
+                    (step: Boolean => (s.Target, Instant) => s.Target): Seq[Moment[s.Target]] = {
 
     val init = Moment(baseTime, s.startAt(baseTime))
 
-    val accumulate = { (prev: Moment[s.Target], delta: FiniteDuration) =>
+    val accumulate = { (prev: Moment[s.Target], next: (FiniteDuration, Boolean)) =>
+      val (delta, completed) = next
       val now = prev.time + delta
-      Moment(now, s.completedAt(prev.target, now))
+      Moment(now, step(completed)(prev.target, now))
     }
 
-    completionTimes.scanLeft(init)(accumulate)
+    completions.scanLeft(init)(accumulate)
   }
 
   def traceExecutionInfo(baseTime: Instant)
-                        (completionTimes: Seq[FiniteDuration])
-                        (s: Schedule): Seq[MomentInfo] = {
-    traceExecution(baseTime)(completionTimes)(s).map { moment =>
+                        (completions: Seq[(FiniteDuration, Boolean)])
+                        (s: Schedule)
+                        (step: Boolean => (s.Target, Instant) => s.Target): Seq[MomentInfo] = {
+    traceExecution(baseTime)(completions)(s)(step).map { moment =>
       MomentInfo(moment.time, TargetInfo(moment.target.initiateAt,
                                          moment.target.timeoutAt))
     }
   }
+
+  def chooseStep[S <: Schedule](s: S)
+                               (completed: Boolean)
+                               (prev: s.Target, now: Instant): s.Target = {
+    if (completed) s.completedAt(prev, now) else s.timedOutAt(prev, now)
+  }
+
 }
 
 

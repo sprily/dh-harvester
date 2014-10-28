@@ -13,7 +13,7 @@ trait Schedule {
 
   def startAt(now: Instant): Target
   def completedAt(previous: Target, now: Instant): Target
-  def timedOutAt(previous: Target, now: Instant): Target
+  def timedOutAt(previous: Target, now: Instant): Target = completedAt(previous, now)
 
   /* derived methods */
   def start(): Target = startAt(now())

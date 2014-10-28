@@ -28,6 +28,4 @@ case class Delay(schedule: Schedule, delay: FiniteDuration) extends Schedule {
       timeoutAt = underlying.timeoutAt,
       underlying = underlying)
   }
-
-  override def timedOutAt(previous: Target, now: Instant) = ???
 }

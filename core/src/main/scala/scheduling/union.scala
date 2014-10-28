@@ -47,8 +47,6 @@ case class Union(s1: Schedule, s2: Schedule) extends Schedule {
     target(t1,t2)
   }
 
-  override def timedOutAt(previous: Target, now: Instant) = ???
-
   private def target(t1: s1.Target, t2: s2.Target) = {
 
     val initiateAt = t1.initiateAt min t2.initiateAt
