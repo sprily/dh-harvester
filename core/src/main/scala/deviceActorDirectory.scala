@@ -8,6 +8,7 @@ import akka.actor.ActorSelection
 import akka.actor.ActorSystem
 import akka.actor.ActorRef
 import akka.actor.Props
+import akka.actor.Terminated
 
 import org.joda.time.LocalDateTime
 
@@ -51,16 +52,19 @@ abstract class DeviceActorDirectoryImpl[D <: Device]
 
     def receive = {
       case p@Poll(device, _) => lookupActor(device) forward p
+      case Terminated(a)     => locs = locs.filter { case (_,ref) => a != ref }
     }
 
     def lookupActor(d: D): ActorRef = {
       val netLoc = netLocFor(d)
       if(! locs.contains(netLoc)) {
         val a = context.actorOf(workerProps(netLoc))
+        context watch a
         locs += netLoc -> a
       }
 
       locs.get(netLoc).get
     }
+
   }
 }
