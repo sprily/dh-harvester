@@ -59,7 +59,7 @@ class PollingActor[D <: Device](
     bus.publish(reading)
     currentTarget.foreach { target =>
       currentTarget = Some(req.schedule.completed(target))
-      schedulePollFor(target)
+      schedulePollFor(currentTarget.get)
     }
   }
 
