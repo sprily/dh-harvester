@@ -7,7 +7,9 @@ import java.io._
 
 import akka.actor.Actor
 import akka.actor.ActorLogging
+import akka.actor.OneForOneStrategy
 import akka.actor.Props
+import akka.actor.SupervisorStrategy._
 import akka.routing.RoundRobinPool
 
 import com.ghgande.j2mod.modbus._
@@ -27,13 +29,21 @@ object ConnectionActor {
               directory: DeviceActorDirectoryService[ModbusDevice],
               numConnections: Int = 1): Props = {
     props(gateway, directory).
-      withRouter(RoundRobinPool(numConnections))
+      withRouter(RoundRobinPool(
+        numConnections,
+        supervisorStrategy=supervisorStrategy))
   }
 
   private def props(gateway: TCPGateway,
             directory: DeviceActorDirectoryService[ModbusDevice]): Props = {
     Props(new ConnectionActor(gateway, directory))
   }
+
+  private lazy val supervisorStrategy =
+    OneForOneStrategy() {
+      case e: Exception => Restart
+    }
+
 }
 
 /** Manages a single connection to a modbus TCP gateway **/
