@@ -12,7 +12,7 @@ import akka.actor.Props
 
 import network.TCPGateway
 
-trait ActorDirectory extends DeviceActorDirectoryService[ModbusDevice] {
+trait ActorDirectory extends DeviceActorDirectory[ModbusDevice] {
 
   //def lookup(d: ModbusDevice)
   //          (implicit context: ActorContext): ActorSelection = {
@@ -21,7 +21,7 @@ trait ActorDirectory extends DeviceActorDirectoryService[ModbusDevice] {
 
 }
 
-class ModbusActorDirectory(system: ActorSystem) extends DeviceActorDirectoryService[ModbusDevice] { dir =>
+class ModbusActorDirectory(system: ActorSystem) extends DeviceActorDirectory[ModbusDevice] { dir =>
 
   import Protocol.Poll
 

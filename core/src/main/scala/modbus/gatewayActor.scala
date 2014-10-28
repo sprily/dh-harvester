@@ -26,7 +26,7 @@ import harvester.network.TCPGateway
 object ConnectionActor {
 
   def gateway(gateway: TCPGateway,
-              directory: DeviceActorDirectoryService[ModbusDevice],
+              directory: DeviceActorDirectory[ModbusDevice],
               numConnections: Int = 1): Props = {
     props(gateway, directory).
       withRouter(RoundRobinPool(
@@ -35,7 +35,7 @@ object ConnectionActor {
   }
 
   private def props(gateway: TCPGateway,
-            directory: DeviceActorDirectoryService[ModbusDevice]): Props = {
+            directory: DeviceActorDirectory[ModbusDevice]): Props = {
     Props(new ConnectionActor(gateway, directory))
   }
 
@@ -49,7 +49,7 @@ object ConnectionActor {
 /** Manages a single connection to a modbus TCP gateway **/
 class ConnectionActor(
     val gateway: TCPGateway,
-    directory: DeviceActorDirectoryService[ModbusDevice]) extends Actor
+    directory: DeviceActorDirectory[ModbusDevice]) extends Actor
                                                              with ActorLogging {
 
   import directory.Protocol._

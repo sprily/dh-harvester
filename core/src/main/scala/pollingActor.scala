@@ -12,7 +12,7 @@ import network.Device
 
 class PollingActor[D <: Device](
     val req: PersistentRequest[D],
-    val directory: DeviceActorDirectoryService[D],
+    val directory: DeviceActorDirectory[D],
     val bus: DeviceBus) extends Actor
                            with ActorLogging {
 
@@ -88,7 +88,7 @@ class PollingActor[D <: Device](
 object PollingActor {
 
   def props[D <: Device](req: PersistentRequest[D])
-                        (implicit directory: DeviceActorDirectoryService[D],
+                        (implicit directory: DeviceActorDirectory[D],
                                   bus: DeviceBus): Props = {
 
     Props(new PollingActor[D](req, directory, bus))
