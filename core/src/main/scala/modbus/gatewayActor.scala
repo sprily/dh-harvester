@@ -56,7 +56,7 @@ class ConnectionActor(
 
   var conn: TCPMasterConnection = _
 
-  override def postStop() {
+  override def postStop() = {
     if (conn != null) {
       conn.close()
     }
@@ -91,7 +91,6 @@ class ConnectionActor(
 
   private def connectIfNecessary(): Unit = {
     if (conn == null) {
-      println("Connecting")
       conn = new TCPMasterConnection(gateway.address.inet)
       conn.setPort(gateway.port)
       conn.connect()
