@@ -43,13 +43,7 @@ object Main {
       device,
       ModbusRegisterRange(50520, 4))
 
-    implicit val directory = new ActorDirectory {
-      def lookup(d: ModbusDevice)
-                (implicit context: ActorContext): ActorSelection = {
-        context.actorSelection("/user/modbus-gw")
-      }
-    }
-
+    implicit val directory = new ModbusActorDirectory(system)
     implicit val bus = new AkkaDeviceBus()
 
     val printer = system.actorOf(Props(new Actor {
@@ -59,17 +53,10 @@ object Main {
     }))
     bus.subscribe(printer, device)
 
-    val gw = system.actorOf(
-      ConnectionActor.gateway(
-        device.address.gateway,
-        directory, 1),
-      "modbus-gw"
-    )
-
     val poller = system.actorOf(PollingActor.props(req))
     poller ! PollingActor.Protocol.StartActor
 
-    Thread.sleep(60000)
+    Thread.sleep(10000)
     system.shutdown()
   }
 }
