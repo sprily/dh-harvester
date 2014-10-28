@@ -55,6 +55,7 @@ class PollingActor[D <: Device](
 
   def resultRcvd(r: Result) = {
     log.debug(s"Received PollResult from gateway: ${r.timestamp}")
+    context.setReceiveTimeout(Duration.Undefined)
     val reading = Reading(r.timestamp, req.device, r.measurement)
     bus.publish(reading)
     currentTarget.foreach { target =>
@@ -65,6 +66,7 @@ class PollingActor[D <: Device](
 
   def receiveTimeoutRcvd() = {
     log.warning(s"Timed-out out waiting for response from ${req.device}")
+    context.setReceiveTimeout(Duration.Undefined)
     currentTarget.foreach { target =>
       currentTarget = Some(req.schedule.timedOut(target))
     }
