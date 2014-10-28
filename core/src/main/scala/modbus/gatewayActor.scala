@@ -82,11 +82,11 @@ class ConnectionActor(
     
     tx.execute()  // blocking
     val res = tx.getResponse().asInstanceOf[ReadMultipleRegistersResponse]
-    val results = res.getRegisters.map(_.toUnsignedShort)
-    //results.foreach(println)
-    //println
+    val m = ModbusMeasurement(
+      p.selection,
+    res.getRegisters.map(r => Word16(r.toShort)).toSeq)
 
-    sender ! Result(LocalDateTime.now(), "succcess")
+    sender ! Result(LocalDateTime.now(), m)
   }
 
   private def connectIfNecessary(): Unit = {
