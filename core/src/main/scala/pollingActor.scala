@@ -48,6 +48,7 @@ class PollingActor[D <: Device](
   def pollNowRcvd() = {
     log.debug(s"Polling device ${req.device}")
     currentTarget.foreach { target =>
+      log.debug(s"Setting receiveTimeout for: ${target.timeoutDelay()}")
       context.setReceiveTimeout(target.timeoutDelay())
       gateway ! pollMsg
     }

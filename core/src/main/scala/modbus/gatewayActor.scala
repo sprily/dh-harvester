@@ -80,7 +80,9 @@ class ConnectionActor(
     val tx = new ModbusTCPTransaction(conn)
     tx.setRequest(req)
     
+    log.debug(s"Executing modbus transaction: ${p.selection}")
     tx.execute()  // blocking
+    log.debug(s"Transaction completed")
     val res = tx.getResponse().asInstanceOf[ReadMultipleRegistersResponse]
     val m = ModbusMeasurement(
       p.selection,
@@ -91,6 +93,7 @@ class ConnectionActor(
 
   private def connectIfNecessary(): Unit = {
     if (conn == null) {
+      log.info(s"Establishing initial connection to ${gateway}")
       conn = new TCPMasterConnection(gateway.address.inet)
       conn.setPort(gateway.port)
       conn.connect()
