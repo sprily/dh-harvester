@@ -4,20 +4,6 @@ package scheduling
 
 import scala.concurrent.duration._
 
-object RetryTest {
-  val s1 = Schedule.each(59.seconds)
-                   .retryEvery(9.seconds)
-  val s2 = s1.fixTimeoutTo(22.seconds)
-
-  val now = Instant.now()
-
-  val init1 = s1.startAt(now)
-  val init2 = s2.startAt(now)
-
-  val f1 = s1.timedOutAt(init1, now+56.seconds)
-  val f2 = s2.timedOutAt(init2, now+56.seconds)
-}
-
 case class Retry(schedule: Schedule, retry: FiniteDuration) extends Schedule {
 
   case class Target(
