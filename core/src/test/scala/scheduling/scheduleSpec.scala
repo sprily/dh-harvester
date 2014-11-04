@@ -77,6 +77,12 @@ object ScheduleSpec extends Specification with ScalaCheck
     if (completed) s.completedAt(prev, now) else s.timedOutAt(prev, now)
   }
 
+  def successOnlyStep[S <: Schedule](s: S)
+                                    (ignored: Boolean)
+                                    (prev: s.Target, now: Instant): s.Target = {
+    chooseStep(s)(true)(prev, now)
+  }
+
 }
 
 

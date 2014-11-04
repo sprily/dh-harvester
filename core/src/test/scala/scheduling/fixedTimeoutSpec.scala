@@ -20,6 +20,8 @@ class FixedTimeoutSpec extends Specification with ScalaCheck
                                              with NoTimeConversions
                                              with CommonGenerators {
 
+  implicit val ps = Parameters(minTestsOk=300)
+
   "FixedTimeout" should {
 
     "fix timeout after initiateAt" in {

@@ -20,6 +20,8 @@ class DelaySpec extends Specification with ScalaCheck
                                       with NoTimeConversions
                                       with CommonGenerators {
 
+  implicit val ps = Parameters(minTestsOk=300)
+
   "Delay" should {
 
     "target the intended delayed start" in {
