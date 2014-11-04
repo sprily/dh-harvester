@@ -13,8 +13,7 @@ import org.specs2.mutable.Specification
 import org.specs2.matcher.Parameters
 import org.specs2.time.NoTimeConversions
 
-import ScheduleSpec.traceExecutionInfo
-import ScheduleSpec.chooseStep
+import ScheduleSpec.traceExecution
 
 class FixedTimeoutSpec extends Specification with ScalaCheck
                                              with NoTimeConversions
@@ -33,8 +32,7 @@ class FixedTimeoutSpec extends Specification with ScalaCheck
          completions: Seq[(FiniteDuration, Boolean)]) => {
           val fixed = s.fixTimeoutTo(timeout)
           val now = Instant.now()
-          val step = chooseStep(fixed) _
-          val trace = traceExecutionInfo(now)(completions)(fixed)(step)
+          val trace = traceExecution(now)(completions)(fixed)
 
           import ScheduleSpec.MomentInfo
           trace must contain { (m: MomentInfo) =>

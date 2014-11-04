@@ -13,9 +13,7 @@ import org.specs2.mutable.Specification
 import org.specs2.matcher.Parameters
 import org.specs2.time.NoTimeConversions
 
-import ScheduleSpec.chooseStep
-import ScheduleSpec.successOnlyStep
-import ScheduleSpec.traceExecutionInfo
+import ScheduleSpec.traceExecution
 
 class RetrySpec extends Specification with ScalaCheck
                                      with NoTimeConversions
@@ -32,17 +30,8 @@ class RetrySpec extends Specification with ScalaCheck
         (s: Schedule, 
          retry: FiniteDuration,
          completionTimes: Seq[FiniteDuration]) => {
-          val retrySch = s.retryEvery(retry)
-          val now = Instant.now()
           val completions = completionTimes.map((_,true))
-
-          val retryStep = successOnlyStep(retrySch) _
-          val step = successOnlyStep(s) _
-
-          val withoutRetry = traceExecutionInfo(now)(completions)(s)(step)
-          val withRetry    = traceExecutionInfo(now)(completions)(retrySch)(retryStep)
-
-          withoutRetry must === (withRetry)
+          ScheduleSpec.equalTraces(s, s.retryEvery(retry))(completions)
         }
       }
     }
@@ -59,7 +48,7 @@ class RetrySpec extends Specification with ScalaCheck
         (30.seconds, true)  // 3rd attempt succeeds at 6min 30s.
       )
 
-      val trace = traceExecutionInfo(now)(completions)(underTest)(chooseStep(underTest))
+      val trace = traceExecution(now)(completions)(underTest)
 
       val initiateDeadlines = trace.map(_.target.initiateAt)
       initiateDeadlines must === (List(
@@ -82,7 +71,7 @@ class RetrySpec extends Specification with ScalaCheck
         (5300.millis, true)   // 3rd attempt successed at 30.3 seconds
       )
 
-      val trace = traceExecutionInfo(now)(completions)(underTest)(chooseStep(underTest))
+      val trace = traceExecution(now)(completions)(underTest)
 
       val initiateDeadlines = trace.map(_.target.initiateAt)
       initiateDeadlines must === (List(

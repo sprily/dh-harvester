@@ -13,8 +13,7 @@ import org.specs2.mutable.Specification
 import org.specs2.matcher.Parameters
 import org.specs2.time.NoTimeConversions
 
-import ScheduleSpec.traceExecutionInfo
-import ScheduleSpec.chooseStep
+import ScheduleSpec.traceExecution
 
 class DelaySpec extends Specification with ScalaCheck
                                       with NoTimeConversions
@@ -52,16 +51,7 @@ class DelaySpec extends Specification with ScalaCheck
       implicit val completions = Arbitrary(FDGen.choose(0.seconds, 60.seconds))
       prop {
         (s: Schedule, completions: Seq[(FiniteDuration, Boolean)]) => {
-          val delayed = s.delayBy(0.seconds)
-          val now = Instant.now()
-
-          val delayedStep = chooseStep(delayed) _
-          val step = chooseStep(s) _
-
-          val withoutDelay = traceExecutionInfo(now)(completions)(s)(step)
-          val withDelay    = traceExecutionInfo(now)(completions)(delayed)(delayedStep)
-
-          withoutDelay must === (withDelay)
+          ScheduleSpec.equalTraces(s, s.delayBy(0.seconds))(completions)
         }
       }
     }
