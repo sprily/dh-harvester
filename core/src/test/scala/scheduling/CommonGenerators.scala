@@ -27,7 +27,8 @@ trait CommonGenerators {
         4 -> primitives,
         4 -> delay(FDGen.choose(0.seconds, 10.seconds), depth-1)(Gen.lzy(all(depth-1))),
         1 -> union(depth-1)(Gen.lzy(all(depth-1))),
-        1 -> fixedTimeout(FDGen.choose(0.seconds, 10.seconds), depth-1)(Gen.lzy(all(depth-1)))
+        4 -> fixedTimeout(FDGen.choose(0.seconds, 10.seconds), depth-1)(Gen.lzy(all(depth-1))),
+        4 -> retry(FDGen.choose(0.seconds, 120.seconds), depth-1)(Gen.lzy(all(depth-1)))
       )
 
       if (depth <= 0) primitives else nextSchedule()
@@ -64,6 +65,23 @@ trait CommonGenerators {
           timeout <- timeouts
           sch   <- nextSchedule()
         } yield Schedule.fixedTimeout(sch, timeout)
+      }
+    }
+
+    def retry(retries: Gen[FiniteDuration], depth: Int)
+             (implicit others: Gen[Schedule]): Gen[Schedule] = {
+
+      def nextSchedule(): Gen[Schedule] = Gen.frequency(
+        1 -> Gen.lzy(retry(retries, depth-1)),
+        1 -> others
+      )
+
+      depth match {
+        case 0 => others
+        case _ => for {
+          retry <- retries
+          sch   <- nextSchedule()
+        } yield Schedule.retry(sch, retry)
       }
     }
 
