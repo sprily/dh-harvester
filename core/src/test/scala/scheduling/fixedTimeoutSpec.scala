@@ -42,6 +42,17 @@ class FixedTimeoutSpec extends Specification with ScalaCheck
       }
     }
 
+    "fix(fix(s, t1), t2) === fix(s, t2)" in {
+      implicit val schedules = Arbitrary(Gen.sized(sz => ScheduleGen.all(sz)))
+      implicit val durations = Arbitrary(FDGen.choose(0.seconds, 60.seconds))
+      prop {
+        (s: Schedule, completions: Seq[(FiniteDuration, Boolean)],
+         t1: FiniteDuration, t2: FiniteDuration) => {
+          ScheduleSpec.equalTraces(s.fixTimeoutTo(t1).fixTimeoutTo(t2),
+                                   s.fixTimeoutTo(t2))(completions)
+        }
+      }
+    }
 
     "generate meaningful Targets" in {
       val FDs = FDGen.choose(0.seconds, 60.seconds)

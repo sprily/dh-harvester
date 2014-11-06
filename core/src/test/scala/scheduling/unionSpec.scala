@@ -51,5 +51,18 @@ class UnionSpec extends Specification with ScalaCheck
       }
     }
 
+    "union(each(2N), delay(each(2N), N)) === each(N)" in {
+      implicit val durations = Arbitrary(FDGen.choose(0.seconds, 60.seconds))
+      prop {
+        (N: FiniteDuration,
+         completions: Seq[(FiniteDuration, Boolean)]) => {
+          import Schedule.each
+          val union = each(2 * N).unionWith(each(2*N).delayBy(N))
+          val nonUnion = each(N)
+          ScheduleSpec.equalTraces(union, nonUnion)(completions)
+        }
+      }
+    }
+
   }
 }
