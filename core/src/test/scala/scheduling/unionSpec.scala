@@ -17,6 +17,8 @@ class UnionSpec extends Specification with ScalaCheck
                                       with NoTimeConversions
                                       with CommonGenerators {
 
+  implicit val ps = Parameters(minTestsOk=300)
+
   "Union" should {
 
     "generate meaningful Targets" in {
@@ -25,6 +27,42 @@ class UnionSpec extends Specification with ScalaCheck
       implicit val schedules = Arbitrary(Gen.sized(sz => ScheduleGen.union(sz)))
       ScheduleSpec.meaningfulTargetProperty
     }.set(minTestsOk=100)
+
+    "union(s,s) === s" in {
+      implicit val schedules = Arbitrary(Gen.sized(sz => ScheduleGen.all(sz)))
+      implicit val completions = Arbitrary(FDGen.choose(0.seconds, 60.seconds))
+      prop {
+        (s: Schedule,
+         completions: Seq[(FiniteDuration, Boolean)]) => {
+          ScheduleSpec.equalTraces(s, s.unionWith(s))(completions)
+         }
+      }
+    }
+
+    "union(s1, s2) === union(s2, s1)" in {
+      implicit val schedules = Arbitrary(Gen.sized(sz => ScheduleGen.all(sz)))
+      implicit val completions = Arbitrary(FDGen.choose(0.seconds, 60.seconds))
+      prop {
+        (s1: Schedule,
+         s2: Schedule,
+         completions: Seq[(FiniteDuration, Boolean)]) => {
+           ScheduleSpec.equalTraces(s1, s2)(completions)
+         }
+      }
+    }
+
+    "union(each(2N), delay(each(2N), N)) === each(N)" in {
+      implicit val durations = Arbitrary(FDGen.choose(0.seconds, 60.seconds))
+      prop {
+        (N: FiniteDuration,
+         completions: Seq[(FiniteDuration, Boolean)]) => {
+          import Schedule.each
+          val union = each(2 * N).unionWith(each(2*N).delayBy(N))
+          val nonUnion = each(N)
+          ScheduleSpec.equalTraces(union, nonUnion)(completions)
+        }
+      }
+    }
 
   }
 }

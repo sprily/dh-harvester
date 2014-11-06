@@ -70,6 +70,7 @@ class PollingActor[D <: Device](
     context.setReceiveTimeout(Duration.Undefined)
     currentTarget.foreach { target =>
       currentTarget = Some(req.schedule.timedOut(target))
+      schedulePollFor(currentTarget.get)
     }
     throw new PollingTimedOutException()
   }

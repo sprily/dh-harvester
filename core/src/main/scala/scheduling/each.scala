@@ -52,7 +52,6 @@ case class Each(interval: FiniteDuration) extends Schedule {
     )
   }
 
-  override def timedOutAt(previous: Target, now: Instant) = ???
-
+  override def timedOutAt(previous: Target, now: Instant) = completedAt(previous, now)
 }
 

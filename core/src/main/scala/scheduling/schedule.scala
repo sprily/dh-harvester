@@ -29,11 +29,17 @@ object Schedule {
 
   def each(interval: FiniteDuration): Schedule = Each(interval)
   def delay(schedule: Schedule, delay: FiniteDuration): Schedule = Delay(schedule, delay)
+  def fixedTimeout(schedule: Schedule, timeout: FiniteDuration): Schedule = {
+    FixedTimeout(schedule, timeout)
+  }
+  def retry(s: Schedule, retry: FiniteDuration): Schedule = Retry(s, retry)
   def union(s1: Schedule, s2: Schedule): Schedule = Union(s1,s2)
 
   implicit class ScheduleOps(s: Schedule) {
     def delayBy(delay: FiniteDuration) = Schedule.delay(s, delay)
     def unionWith(s2: Schedule) = Schedule.union(s, s2)
+    def fixTimeoutTo(timeout: FiniteDuration) = Schedule.fixedTimeout(s, timeout)
+    def retryEvery(retry: FiniteDuration) = Schedule.retry(s, retry)
   }
 
 }

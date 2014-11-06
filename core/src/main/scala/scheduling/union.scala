@@ -47,7 +47,34 @@ case class Union(s1: Schedule, s2: Schedule) extends Schedule {
     target(t1,t2)
   }
 
-  override def timedOutAt(previous: Target, now: Instant) = ???
+  override def timedOutAt(previous: Target, now: Instant) = {
+
+    val (t1, t2) = previous.chosen match {
+      case Fst(t1) =>
+        val newT1 = s1.timedOutAt(t1, now)
+        val t2 = previous.targets._2
+        val newT2 = t2.initiateAt - now match {
+          case delta if delta > Duration.Zero => t2
+          case delta                          => s2.timedOutAt(t2, now)
+        }
+        (newT1, newT2)
+
+      case Snd(t2) =>
+        val newT2 = s2.timedOutAt(t2, now)
+        val t1 = previous.targets._1
+        val newT1 = t1.initiateAt - now match {
+          case delta if delta > Duration.Zero => t1
+          case delta                          => s1.timedOutAt(t1, now)
+        }
+        (newT1, newT2)
+
+      case Both(t1,t2) =>
+        (s1.timedOutAt(t1, now),
+         s2.timedOutAt(t2, now))
+    }
+
+    target(t1,t2)
+  }
 
   private def target(t1: s1.Target, t2: s2.Target) = {
 

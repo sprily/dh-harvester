@@ -13,9 +13,13 @@ import org.specs2.mutable.Specification
 import org.specs2.matcher.Parameters
 import org.specs2.time.NoTimeConversions
 
+import ScheduleSpec.traceExecution
+
 class DelaySpec extends Specification with ScalaCheck
                                       with NoTimeConversions
                                       with CommonGenerators {
+
+  implicit val ps = Parameters(minTestsOk=300)
 
   "Delay" should {
 
@@ -46,13 +50,8 @@ class DelaySpec extends Specification with ScalaCheck
       implicit val schedules = Arbitrary(Gen.sized(sz => ScheduleGen.all(sz)))
       implicit val completions = Arbitrary(FDGen.choose(0.seconds, 60.seconds))
       prop {
-        (s: Schedule, completionTimes: Seq[FiniteDuration]) => {
-          val delayedSchedule = s.delayBy(0.seconds)
-          val runner = ScheduleSpec.traceExecutionInfo(Instant.now())(completionTimes) _
-          val withoutDelay = runner(s)
-          val withDelay    = runner(delayedSchedule)
-
-          withoutDelay must === (withDelay)
+        (s: Schedule, completions: Seq[(FiniteDuration, Boolean)]) => {
+          ScheduleSpec.equalTraces(s, s.delayBy(0.seconds))(completions)
         }
       }
     }

@@ -17,6 +17,8 @@ class EachSpec extends Specification with ScalaCheck
                                      with NoTimeConversions
                                      with CommonGenerators {
 
+  implicit val ps = Parameters(minTestsOk=300)
+
   "Each" should {
 
     "target an immediate start" in {
