@@ -12,6 +12,7 @@ import scala.concurrent.duration._
 import network._
 import modbus._
 import scheduling._
+import capture._
 
 object Main {
   def main(args: Array[String]): Unit = {
