@@ -85,6 +85,22 @@ trait CommonGenerators {
       }
     }
 
+    def take(depth: Int)
+            (implicit others: Gen[Schedule], limits: Gen[Long]): Gen[Schedule] = {
+      def nextSchedule() = Gen.frequency(
+        1 -> Gen.lzy(take(depth-1)),
+        1 -> others
+      )
+
+      depth match {
+        case 0 => others
+        case _ => for {
+          s <- nextSchedule()
+          limit <- limits
+        } yield Schedule.take(s, limit)
+      }
+    }
+
     def union(depth: Int)
              (implicit others: Gen[Schedule]): Gen[Schedule] = {
 
