@@ -50,7 +50,7 @@ class RetrySpec extends Specification with ScalaCheck
 
       val trace = traceExecution(now)(completions)(underTest)
 
-      val initiateDeadlines = trace.map(_.target.initiateAt)
+      val initiateDeadlines = trace.map(_.target.get.initiateAt)
       initiateDeadlines must === (List(
         now + 0.seconds,
         now + 5.minute,
@@ -73,7 +73,7 @@ class RetrySpec extends Specification with ScalaCheck
 
       val trace = traceExecution(now)(completions)(underTest)
 
-      val initiateDeadlines = trace.map(_.target.initiateAt)
+      val initiateDeadlines = trace.map(_.target.get.initiateAt)
       initiateDeadlines must === (List(
         now + 0.seconds,
         now + 15.seconds,

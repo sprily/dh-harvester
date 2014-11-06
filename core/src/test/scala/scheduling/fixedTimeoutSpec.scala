@@ -14,6 +14,7 @@ import org.specs2.matcher.Parameters
 import org.specs2.time.NoTimeConversions
 
 import ScheduleSpec.traceExecution
+import ScheduleSpec.beNoneOr
 
 class FixedTimeoutSpec extends Specification with ScalaCheck
                                              with NoTimeConversions
@@ -36,7 +37,7 @@ class FixedTimeoutSpec extends Specification with ScalaCheck
 
           import ScheduleSpec.MomentInfo
           trace must contain { (m: MomentInfo) =>
-            (m.measuredDelay + timeout) must === (m.measuredTimeout)
+            m.measuredTimeout must beNoneOr(=== (m.measuredDelay.get + timeout))
           }.forall
         }
       }

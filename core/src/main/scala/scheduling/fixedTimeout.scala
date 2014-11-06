@@ -24,13 +24,13 @@ case class FixedTimeout(schedule: Schedule, timeout: FiniteDuration) extends Sch
   }
 
   override def completedAt(previous: Target, now: Instant) = {
-    val underlying = schedule.completedAt(previous.underlying, now)
-    Target(underlying)
+    schedule.completedAt(previous.underlying, now)
+            .map(Target.apply _)
   }
 
   override def timedOutAt(previous: Target, now: Instant) = {
-    val underlying = schedule.timedOutAt(previous.underlying, now)
-    Target(underlying)
+    schedule.timedOutAt(previous.underlying, now)
+            .map(Target.apply _)
   }
 
 }

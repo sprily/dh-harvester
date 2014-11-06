@@ -38,8 +38,8 @@ class DelaySpec extends Specification with ScalaCheck
           val delayedTarget = schedule.completedAt(firstTarget, baseTime + timeToComplete + delay)
           val normalTarget = each.completedAt(each.startAt(baseTime), baseTime + timeToComplete)
 
-          val delayedDeadline = delayedTarget.timeoutDelayFrom(baseTime)
-          val normalDeadline  = normalTarget.timeoutDelayFrom(baseTime) + delay
+          val delayedDeadline = delayedTarget.get.timeoutDelayFrom(baseTime)
+          val normalDeadline  = normalTarget.get.timeoutDelayFrom(baseTime) + delay
 
           delayedDeadline must === (normalDeadline)
         }

@@ -12,13 +12,13 @@ trait Schedule {
   type Target <: TargetLike
 
   def startAt(now: Instant): Target
-  def completedAt(previous: Target, now: Instant): Target
-  def timedOutAt(previous: Target, now: Instant): Target
+  def completedAt(previous: Target, now: Instant): Option[Target]
+  def timedOutAt(previous: Target, now: Instant): Option[Target]
 
   /* derived methods */
   def start(): Target = startAt(now())
-  def completed(previous: Target): Target = completedAt(previous, now())
-  def timedOut(previous: Target): Target = timedOutAt(previous, now())
+  def completed(previous: Target): Option[Target] = completedAt(previous, now())
+  def timedOut(previous: Target): Option[Target] = timedOutAt(previous, now())
 
   /* helper methods */
   private def now() = Instant.now()
