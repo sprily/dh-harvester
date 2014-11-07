@@ -21,6 +21,29 @@ class TakeSpec extends Specification with ScalaCheck
 
   "Take" should {
 
+    "stop providing Targets when limit is hit" in {
+
+      import ScheduleSpec.TargetInfo
+
+      implicit val schedules = Arbitrary(ScheduleGen.primitives)
+      implicit val limits = Arbitrary(Gen.choose(1,10))
+      implicit val FDs = Arbitrary(FDGen.choose(0.seconds, 60.seconds))
+
+      prop {
+        (s: Schedule,
+         limit: Int,
+         completions: Seq[(FiniteDuration, Boolean)]) => {
+          val limited = s.take(limit)
+          val trace = ScheduleSpec.traceExecution(Instant.now())(completions)(limited)
+          val targets = trace.map(_.target)
+          val (expectedSome, expectedNone) = targets.splitAt(limit)
+
+          (expectedSome must contain(beSome[TargetInfo]).forall) and
+          (expectedNone must contain(beNone).forall)
+        }
+      }
+    }
+
     "generate meaningful Targets" in {
       implicit val FDs = Arbitrary(FDGen.choose(0.seconds, 60.seconds))
       implicit val limits = Gen.choose[Long](0L, 10L)
@@ -29,41 +52,19 @@ class TakeSpec extends Specification with ScalaCheck
       ScheduleSpec.meaningfulTargetProperty
     }
 
-    "union(s,s) === s" in {
-      implicit val schedules = Arbitrary(Gen.sized(sz => ScheduleGen.all(sz)))
+    "take(s, N) should match trace of s up until N" in {
+      implicit val schdules = Arbitrary(Gen.sized(ScheduleGen.all(_)))
       implicit val completions = Arbitrary(FDGen.choose(0.seconds, 60.seconds))
+      implicit val limits = Arbitrary(Gen.choose(1, 10))
       prop {
         (s: Schedule,
-         completions: Seq[(FiniteDuration, Boolean)]) => {
-          ScheduleSpec.equalTraces(s, s.unionWith(s))(completions)
-         }
-      }
-    }
-
-    "union(s1, s2) === union(s2, s1)" in {
-      implicit val schedules = Arbitrary(Gen.sized(sz => ScheduleGen.all(sz)))
-      implicit val completions = Arbitrary(FDGen.choose(0.seconds, 60.seconds))
-      prop {
-        (s1: Schedule,
-         s2: Schedule,
-         completions: Seq[(FiniteDuration, Boolean)]) => {
-           ScheduleSpec.equalTraces(s1, s2)(completions)
-         }
-      }
-    }
-
-    "union(each(2N), delay(each(2N), N)) === each(N)" in {
-      implicit val durations = Arbitrary(FDGen.choose(0.seconds, 60.seconds))
-      prop {
-        (N: FiniteDuration,
-         completions: Seq[(FiniteDuration, Boolean)]) => {
-          import Schedule.each
-          val union = each(2 * N).unionWith(each(2*N).delayBy(N))
-          val nonUnion = each(N)
-          ScheduleSpec.equalTraces(union, nonUnion)(completions)
+         completions: Seq[(FiniteDuration, Boolean)],
+         N: Int) => {
+          val limitedCompletions = completions.take(N-1)
+          ScheduleSpec.equalTraces(s, s.take(N))(limitedCompletions)
         }
+
       }
     }
-
   }
 }
