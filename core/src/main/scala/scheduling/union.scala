@@ -84,13 +84,13 @@ case class Union(s1: Schedule, s2: Schedule) extends Schedule {
     target(t1,t2)
   }
 
-  private def target(t1: Option[s1.Target], t2: Option[s2.Target]) = {
+  private def target(o1: Option[s1.Target], o2: Option[s2.Target]) = {
 
-    (t1, t2) match {
+    (o1, o2) match {
       case (None, None) => None
-      case (Some(t1), None) => Some(???)  // TODO
-      case (None, Some(t2)) => Some(???)  // TODO
-      case (o1@Some(t1), o2@Some(t2)) => {
+      case (Some(t1), None) => Some(Target(t1.initiateAt, t1.timeoutAt, (o1,o2), Fst(t1)))
+      case (None, Some(t2)) => Some(Target(t2.initiateAt, t2.timeoutAt, (o1,o2), Snd(t2)))
+      case (Some(t1), Some(t2)) => {
         val initiateAt = t1.initiateAt min t2.initiateAt
         val targets    = (o1, o2)
 
