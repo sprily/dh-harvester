@@ -71,7 +71,7 @@ class PollingActorContext extends AkkaSpecs2Support {
     val selection = new AddressSelection {}
   }
 
-  def request(s: Schedule) = PersistentRequest[TestDevice](
+  def request(s: Schedule) = Request[TestDevice](
     id = 1L,
     schedule = s,
     device = fakeDevice,
