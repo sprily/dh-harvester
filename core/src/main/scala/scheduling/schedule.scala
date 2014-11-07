@@ -29,9 +29,7 @@ object Schedule {
 
   def each(interval: FiniteDuration): Schedule = Each(interval)
   def delay(schedule: Schedule, delay: FiniteDuration): Schedule = Delay(schedule, delay)
-  def fixedTimeout(schedule: Schedule, timeout: FiniteDuration): Schedule = {
-    FixedTimeout(schedule, timeout)
-  }
+  def fixedTimeout(s: Schedule, timeout: FiniteDuration): Schedule = FixedTimeout(s, timeout)
   def single(timeout: FiniteDuration) = each(0.seconds).take(1).fixTimeoutTo(timeout)
   def take(s: Schedule, limit: Long): Schedule = Take(s, limit)
   def retry(s: Schedule, retry: FiniteDuration): Schedule = Retry(s, retry)
