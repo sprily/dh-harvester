@@ -28,6 +28,8 @@ class RequestActor[D <: Device](
   private implicit val dispatcher = context.system.dispatcher
   private val scheduler = context.system.scheduler
 
+  scheduleNextPoll()
+
   def receive = {
     case PollNow        => pollNowRcvd()
     case ReceiveTimeout => receiveTimeoutRcvd()
