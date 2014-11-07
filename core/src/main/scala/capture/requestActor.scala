@@ -12,25 +12,26 @@ import akka.actor.ReceiveTimeout
 import network.Device
 import scheduling.TargetLike
 
-trait RequestActor[D <: Device] extends Actor with ActorLogging {
+class RequestActor[D <: Device](
+    val request: Request[D],
+    val directory: DeviceActorDirectory[D],
+    val bus: DeviceBus) extends Actor with ActorLogging {
 
-  val bus: DeviceBus
-  val directory: DeviceActorDirectory[D]
-  val request: RequestLike[D]
+  // actor state
+  private var target = request.schedule.start()
 
-  def target: TargetLike
-
+  import RequestActor._
   import RequestActor.Protocol._
   import directory.Protocol._
 
   // akka stuff
-  private implicit val dispatcher =  context.system.dispatcher
+  private implicit val dispatcher = context.system.dispatcher
   private val scheduler = context.system.scheduler
 
   def receive = {
     case PollNow        => pollNowRcvd()
     case ReceiveTimeout => receiveTimeoutRcvd()
-    case r@Result(_,_)  => resultRcvd(r)
+    case (r: Result)    => resultRcvd(r)
   }
 
   protected def pollNowRcvd() = {
@@ -39,15 +40,50 @@ trait RequestActor[D <: Device] extends Actor with ActorLogging {
     gateway ! pollMsg
   }
 
-  protected def receiveTimeoutRcvd() = ???
-  protected def resultRcvd(r: Result) = ???
+  protected def receiveTimeoutRcvd() = {
+    log.warning(s"Timed-out out waiting for response from ${request.device}")
+    context.setReceiveTimeout(Duration.Undefined)
+    request.schedule.timedOut(target) match {
+      case None =>
+        log.info(s"Stopping RequestActor (${request}) as Schedule completed")
+        context.stop(self)
+      case Some(t) =>
+        target = t
+        scheduleNextPoll()
+    }
+
+    // TODO: Should we throw the time-out exception when the schedule completes?
+    throw new PollingTimedOutException()
+  }
+
+  protected def resultRcvd(r: Result) = {
+    log.debug(s"Received PollResult from gateway: ${r.timestamp}")
+    context.setReceiveTimeout(Duration.Undefined)
+    val reading = Reading(r.timestamp, request.device, r.measurement)
+    bus.publish(reading)
+    request.schedule.timedOut(target) match {
+      case None =>
+        log.info(s"Stopping RequestActor (${request}) as Schedule completed")
+        context.stop(self)
+      case Some(t) =>
+        target = t
+        scheduleNextPoll()
+    }
+  }
+
+  protected def scheduleNextPoll(): Unit = {
+    scheduler.scheduleOnce(target.initialDelay(), self, PollNow)
+  }
 
   private def gateway = directory.lookup(request.device)
   private val pollMsg = Poll(request.device, request.selection)
 }
 
 object RequestActor {
+
   protected[capture] case object Protocol {
     case object PollNow
   }
+
+  class PollingTimedOutException extends Exception
 }

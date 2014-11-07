@@ -38,7 +38,7 @@ object Main {
 
     val system = ActorSystem("all-my-actors", config)
 
-    val req = PersistentRequest[ModbusDevice](
+    val req = Request[ModbusDevice](
       1L,
       Schedule.each(1.seconds),
       device,

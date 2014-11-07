@@ -12,7 +12,7 @@ import akka.actor.ReceiveTimeout
 import network.Device
 
 class PollingActor[D <: Device](
-    val req: PersistentRequest[D],
+    val req: Request[D],
     val directory: DeviceActorDirectory[D],
     val bus: DeviceBus) extends Actor
                            with ActorLogging {
@@ -89,7 +89,7 @@ class PollingActor[D <: Device](
 
 object PollingActor {
 
-  def props[D <: Device](req: PersistentRequest[D])
+  def props[D <: Device](req: Request[D])
                         (implicit directory: DeviceActorDirectory[D],
                                   bus: DeviceBus): Props = {
 
