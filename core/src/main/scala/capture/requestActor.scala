@@ -83,6 +83,14 @@ class RequestActor[D <: Device](
 
 object RequestActor {
 
+  def props[D <: Device](req: Request[D])
+                        (implicit directory: DeviceActorDirectory[D],
+                                  bus: DeviceBus): Props = {
+
+    Props(new RequestActor[D](req, directory, bus))
+
+  }
+
   protected[capture] case object Protocol {
     case object PollNow
   }
