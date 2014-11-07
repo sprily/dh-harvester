@@ -1,5 +1,6 @@
 package uk.co.sprily.dh
 package harvester
+package capture
 
 import scala.language.reflectiveCalls
 
@@ -18,25 +19,24 @@ import org.specs2.time.NoTimeConversions
 
 import network.Device
 import network.DeviceId
-import scheduling.Schedule
 
-class PollingActorSpec extends SpecificationLike
+import scheduling.Instant
+import scheduling.Schedule
+import scheduling.TargetLike
+
+class RequestActorSpec extends SpecificationLike
                           with NoTimeConversions {
 
-  "A PollingActor" should {
+  "A RequestActor" should {
 
-    "Poll the device" in new PollingActorContext {
-
-      val underTest = pollingActor
-      underTest ! PollingActor.Protocol.StartActor
-      underTest ! PollingActor.Protocol.PollNow
-
+    "Poll the device when started" in new RequestActorContext {
+      val underTest = requestActor
       expectMsgType[Poll] must === (pollMsg)
     }
 
-    "Send results to <somewhere>" in new PollingActorContext {
+    "Send results to the results bus" in new RequestActorContext {
       val measurement: fakeDevice.Measurement = List((1,100), (2,200))
-      val underTest = pollingActor
+      val underTest = requestActor
       underTest ! deviceDirectory.Protocol.Result(dt, measurement)
 
       val expected = List(Reading[fakeDevice.type](
@@ -45,19 +45,29 @@ class PollingActorSpec extends SpecificationLike
       fakeDeviceBus.readings must === (expected)
     }
 
-    "Throw an exception when a timeout is hit" in new PollingActorContext {
+    "Throw an exception when a timeout is hit" in new RequestActorContext {
+      (pending)
+    }
+
+    "Stop if the Schedule completes" in new RequestActorContext {
       (pending)
     }
   }
 
 }
 
-class PollingActorContext extends AkkaSpecs2Support {
+class RequestActorContext extends AkkaSpecs2Support {
+
+  case class TestTarget() extends TargetLike {
+    val initiateAt = basetime
+    val timeoutAt = basetime + 1.second
+  }
 
   // for brevity
   type TestDevice = fakeDevice.type
   type Poll = deviceDirectory.Protocol.Poll
 
+  lazy val basetime = Instant.now()
   lazy val dt = LocalDateTime.now()
 
   lazy val fakeDevice = new Device {
@@ -70,9 +80,9 @@ class PollingActorContext extends AkkaSpecs2Support {
     val selection = new AddressSelection {}
   }
 
-  def request(s: Schedule) = PersistentRequest[TestDevice](
+  def request(t: TestTarget) = Request[TestDevice](
     id = 1L,
-    schedule = s,
+    schedule = Schedule.single(3.seconds),
     device = fakeDevice,
     selection = fakeDevice.selection)
 
@@ -100,9 +110,9 @@ class PollingActorContext extends AkkaSpecs2Support {
     def unsubscribe(subscriber: ActorRef): Unit = ???
   }
 
-  def pollingActor = TestActorRef(
-    new PollingActor[fakeDevice.type](
-      request(Schedule.each(3.seconds)),
+  def requestActor = TestActorRef(
+    new RequestActor[fakeDevice.type](
+      request(TestTarget()),
       deviceDirectory,
       fakeDeviceBus
     )
