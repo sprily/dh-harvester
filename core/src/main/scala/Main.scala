@@ -54,8 +54,7 @@ object Main {
     }))
     bus.subscribe(printer, device)
 
-    val poller = system.actorOf(PollingActor.props(req))
-    poller ! PollingActor.Protocol.StartActor
+    val poller = system.actorOf(RequestActor.props(req))
 
     Thread.sleep(10000)
     system.shutdown()
