@@ -14,7 +14,16 @@ import org.specs2.matcher.Parameters
 import org.specs2.time.NoTimeConversions
 
 object ScheduleSpec extends Specification with ScalaCheck
+                                          with CommonGenerators
                                           with NoTimeConversions {
+
+  "All Schedules" should {
+    "generate meaningful Targets" in {
+      implicit val FDs = Arbitrary(FDGen.choose(0.seconds, 60.seconds))
+      implicit val schedules = Arbitrary(Gen.sized(ScheduleGen.all(_)))
+      meaningfulTargetProperty.set(minTestsOk=10000)
+    }
+  }
 
   def meaningfulTargetProperty(implicit schedules: Arbitrary[Schedule],
                                         completionTimes: Arbitrary[FiniteDuration]) = {
