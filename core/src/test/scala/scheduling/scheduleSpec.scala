@@ -48,7 +48,7 @@ object ScheduleSpec extends Specification with ScalaCheck
     val now = Instant.now()
 
     val trace1 = traceExecution(now)(completions)(s1)
-    val trace2 = traceExecution(now)(completions)(s1)
+    val trace2 = traceExecution(now)(completions)(s2)
 
     trace1 must === (trace2)
   }
