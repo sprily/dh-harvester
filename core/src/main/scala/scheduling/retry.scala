@@ -11,21 +11,21 @@ case class Retry(schedule: Schedule, retry: FiniteDuration) extends Schedule {
       val timeoutAt: Deadline,
       val underlying: schedule.Target) extends TargetLike
 
-  override def startAt(now: Instant) = {
-    val underlying = schedule.startAt(now)
-
-    Target(
+  object Target {
+    def apply(underlying: schedule.Target): Target = Target(
       initiateAt = underlying.initiateAt,
       timeoutAt = underlying.timeoutAt,
       underlying = underlying)
   }
 
+  override def startAt(now: Instant) = {
+    val underlying = schedule.startAt(now)
+    Target(underlying)
+  }
+
   override def completedAt(previous: Target, now: Instant) = {
-    val underlying = schedule.completedAt(previous.underlying, now)
-    Target(
-      initiateAt = underlying.initiateAt,
-      timeoutAt = underlying.timeoutAt,
-      underlying = underlying)
+    schedule.completedAt(previous.underlying, now)
+            .map(Target.apply _)
   }
 
   override def timedOutAt(previous: Target, now: Instant) = {
@@ -33,10 +33,10 @@ case class Retry(schedule: Schedule, retry: FiniteDuration) extends Schedule {
     val initiateAt = previous.initiateAt + retry
     val timeout = previous.timeoutAt - previous.initiateAt
 
-    Target(
+    Some(Target(
       initiateAt = if (initiateAt >= now) initiateAt else now,
       timeoutAt = if (initiateAt >= now) initiateAt + timeout else now + timeout,
-      underlying = previous.underlying)
+      underlying = previous.underlying))
   }
 
 }

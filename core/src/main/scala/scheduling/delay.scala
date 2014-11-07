@@ -24,14 +24,12 @@ case class Delay(schedule: Schedule, delay: FiniteDuration) extends Schedule {
   }
 
   def completedAt(previous: Target, now: Instant) = {
-    val underlying = schedule.completedAt(
-      previous.underlying,
-      now)
-    Target(underlying)
+    schedule.completedAt(previous.underlying, now)
+            .map(Target.apply _)
   }
 
   def timedOutAt(previous: Target, now: Instant) = {
-    val underlying = schedule.timedOutAt(previous.underlying, now)
-    Target(underlying)
+    schedule.timedOutAt(previous.underlying, now)
+            .map(Target.apply _)
   }
 }

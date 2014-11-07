@@ -46,10 +46,10 @@ case class Each(interval: FiniteDuration) extends Schedule {
         previous.timeoutAt + Math.round(-delta/interval + 0.5) * interval
     }
 
-    Target(
+    Some(Target(
       initiateAt = now + (timeLeft.max(Duration.Zero)),
       timeoutAt = timeoutAt
-    )
+    ))
   }
 
   override def timedOutAt(previous: Target, now: Instant) = completedAt(previous, now)

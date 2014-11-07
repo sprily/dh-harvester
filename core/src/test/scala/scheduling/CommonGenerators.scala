@@ -23,12 +23,15 @@ trait CommonGenerators {
 
     def all(depth: Int): Gen[Schedule] = {
 
+      implicit val schedules = Gen.lzy(all(depth-1))
+
       def nextSchedule() = Gen.frequency(
         4 -> primitives,
-        4 -> delay(FDGen.choose(0.seconds, 10.seconds), depth-1)(Gen.lzy(all(depth-1))),
-        1 -> union(depth-1)(Gen.lzy(all(depth-1))),
-        4 -> fixedTimeout(FDGen.choose(1.millis, 10.seconds), depth-1)(Gen.lzy(all(depth-1))),
-        4 -> retry(FDGen.choose(0.seconds, 120.seconds), depth-1)(Gen.lzy(all(depth-1)))
+        4 -> delay(FDGen.choose(0.seconds, 10.seconds), depth-1),
+        1 -> union(depth-1),
+        4 -> take(depth-1)(schedules, Gen.choose[Long](0L, 10L)),
+        4 -> fixedTimeout(FDGen.choose(1.millis, 10.seconds), depth-1),
+        4 -> retry(FDGen.choose(0.seconds, 120.seconds), depth-1)
       )
 
       if (depth <= 0) primitives else nextSchedule()
@@ -82,6 +85,22 @@ trait CommonGenerators {
           retry <- retries
           sch   <- nextSchedule()
         } yield Schedule.retry(sch, retry)
+      }
+    }
+
+    def take(depth: Int)
+            (implicit others: Gen[Schedule], limits: Gen[Long]): Gen[Schedule] = {
+      def nextSchedule() = Gen.frequency(
+        1 -> Gen.lzy(take(depth-1)),
+        1 -> others
+      )
+
+      depth match {
+        case 0 => others
+        case _ => for {
+          s <- nextSchedule()
+          limit <- limits
+        } yield Schedule.take(s, limit)
       }
     }
 

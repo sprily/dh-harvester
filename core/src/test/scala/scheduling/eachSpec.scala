@@ -34,7 +34,7 @@ class EachSpec extends Specification with ScalaCheck
       prop {
         (timeToComplete: FiniteDuration) => {
           val target = schedule.completedAt(firstTarget, baseTime + timeToComplete)
-          target.initialDelayFrom(baseTime) must === (3.seconds)
+          target.get.initialDelayFrom(baseTime) must === (3.seconds)
         }
       }
     }
@@ -45,7 +45,7 @@ class EachSpec extends Specification with ScalaCheck
         (timeToComplete: FiniteDuration) => {
           (timeToComplete < 6.seconds) ==> {
             val target = schedule.completedAt(firstTarget, baseTime + timeToComplete)
-            target.timeoutDelayFrom(baseTime) must === (6.seconds)
+            target.get.timeoutDelayFrom(baseTime) must === (6.seconds)
           }
         }
       }
@@ -56,7 +56,7 @@ class EachSpec extends Specification with ScalaCheck
       prop {
         (timeToComplete: FiniteDuration) => {
           val target = schedule.completedAt(firstTarget, baseTime + timeToComplete)
-          target.initialDelayFrom(baseTime + timeToComplete) must === (Duration.Zero)
+          target.get.initialDelayFrom(baseTime + timeToComplete) must === (Duration.Zero)
         }
       }
     }
@@ -67,7 +67,7 @@ class EachSpec extends Specification with ScalaCheck
         (timeToComplete: FiniteDuration) => {
           (timeToComplete < 9.seconds) ==> {
             val target = schedule.completedAt(firstTarget, baseTime + timeToComplete)
-            target.timeoutDelayFrom(baseTime) must === (9.seconds)
+            target.get.timeoutDelayFrom(baseTime) must === (9.seconds)
           }
         }
       }

@@ -60,7 +60,7 @@ class PollingActor[D <: Device](
     val reading = Reading(r.timestamp, req.device, r.measurement)
     bus.publish(reading)
     currentTarget.foreach { target =>
-      currentTarget = Some(req.schedule.completed(target))
+      currentTarget = Some(req.schedule.completed(target).get)
       schedulePollFor(currentTarget.get)
     }
   }
@@ -69,7 +69,7 @@ class PollingActor[D <: Device](
     log.warning(s"Timed-out out waiting for response from ${req.device}")
     context.setReceiveTimeout(Duration.Undefined)
     currentTarget.foreach { target =>
-      currentTarget = Some(req.schedule.timedOut(target))
+      currentTarget = Some(req.schedule.timedOut(target).get)
       schedulePollFor(currentTarget.get)
     }
     throw new PollingTimedOutException()

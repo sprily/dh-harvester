@@ -8,6 +8,7 @@ import org.scalacheck.Arbitrary
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
 
+import org.specs2.matcher.Matcher
 import org.specs2.ScalaCheck
 import org.specs2.mutable.Specification
 import org.specs2.matcher.Parameters
@@ -34,12 +35,16 @@ object ScheduleSpec extends Specification with ScalaCheck
         val trace = traceExecution(baseTime)(completions)(s)
 
         trace must contain { m: MomentInfo =>
-          (m.measuredDelay must beGreaterThanOrEqualTo(Duration.Zero)) and
-          (m.measuredTimeout must beGreaterThan(m.measuredDelay))
+          (m.measuredDelay must beNoneOr(beGreaterThanOrEqualTo(Duration.Zero))) and
+          (m.measuredTimeout must beNoneOr(beGreaterThan(m.measuredDelay.get)))
         }.foreach
 
       }
     }
+  }
+
+  def beNoneOr[T](m: => Matcher[T]): Matcher[Option[T]] = {
+    beNone or ((_: Option[T]).get) ^^ m
   }
 
   def equalTraces(s1: Schedule, s2: Schedule)
@@ -53,32 +58,41 @@ object ScheduleSpec extends Specification with ScalaCheck
     trace1 must === (trace2)
   }
 
-  case class MomentInfo(time: Instant, target: TargetInfo) {
-    val measuredDelay = target.initialDelayFrom(time)
-    val measuredTimeout = target.timeoutDelayFrom(time)
+  case class MomentInfo(time: Instant, target: Option[TargetInfo]) {
+    val measuredDelay = target.map(_.initialDelayFrom(time))
+    val measuredTimeout = target.map(_.timeoutDelayFrom(time))
   }
 
   case class TargetInfo(
       val initiateAt: Deadline,
       val timeoutAt: Deadline) extends TargetLike
 
+  object TargetInfo {
+    def apply(t: TargetLike): TargetInfo = TargetInfo(
+      initiateAt = t.initiateAt,
+      timeoutAt = t.timeoutAt)
+  }
+
   def traceExecution[S <: Schedule]
                     (baseTime: Instant)
                     (completions: Seq[(FiniteDuration, Boolean)])
                     (s: S): Seq[MomentInfo] = {
 
-    type Moment = (Instant, s.Target)
+    case class Moment(t: Instant, target: Option[s.Target])
 
-    val init = (baseTime, s.startAt(baseTime))
-    val step2 = { (completed: Boolean, prev: s.Target, now: Instant) =>
+    def step(completed: Boolean, prev: s.Target, now: Instant): Option[s.Target] = {
       if (completed) s.completedAt(prev, now) else s.timedOutAt(prev, now)
     }
 
-    completions.scanLeft(init) { case (previous, (delta, completed)) =>
-      val now = previous._1 + delta
-      (now, step2(completed, previous._2, now))
-    }.map { case (time, target) =>
-      MomentInfo(time, TargetInfo(target.initiateAt, target.timeoutAt))
+    val init = Moment(baseTime, Some(s.startAt(baseTime)))
+    completions.scanLeft(init) { case (prevMoment, (delta, completed)) =>
+      val now = prevMoment.t + delta
+      Moment(
+        now,
+        prevMoment.target.flatMap(step(completed, _, now))
+      )
+    }.map { m =>
+      MomentInfo(m.t, m.target.map(TargetInfo.apply _))
     }
   }
 
