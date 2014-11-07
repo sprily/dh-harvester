@@ -6,6 +6,8 @@ import scala.concurrent.duration._
 
 case class FixedTimeout(schedule: Schedule, timeout: FiniteDuration) extends Schedule {
 
+  assert(timeout > Duration.Zero)
+
   case class Target(
       val initiateAt: Deadline,
       val timeoutAt: Deadline,

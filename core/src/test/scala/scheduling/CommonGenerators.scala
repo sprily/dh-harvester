@@ -27,7 +27,7 @@ trait CommonGenerators {
         4 -> primitives,
         4 -> delay(FDGen.choose(0.seconds, 10.seconds), depth-1)(Gen.lzy(all(depth-1))),
         1 -> union(depth-1)(Gen.lzy(all(depth-1))),
-        4 -> fixedTimeout(FDGen.choose(0.seconds, 10.seconds), depth-1)(Gen.lzy(all(depth-1))),
+        4 -> fixedTimeout(FDGen.choose(1.millis, 10.seconds), depth-1)(Gen.lzy(all(depth-1))),
         4 -> retry(FDGen.choose(0.seconds, 120.seconds), depth-1)(Gen.lzy(all(depth-1)))
       )
 
