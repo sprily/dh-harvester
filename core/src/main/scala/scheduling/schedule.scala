@@ -32,6 +32,7 @@ object Schedule {
   def fixedTimeout(schedule: Schedule, timeout: FiniteDuration): Schedule = {
     FixedTimeout(schedule, timeout)
   }
+  def single(timeout: FiniteDuration) = each(0.seconds).take(1).fixTimeoutTo(timeout)
   def take(s: Schedule, limit: Long): Schedule = Take(s, limit)
   def retry(s: Schedule, retry: FiniteDuration): Schedule = Retry(s, retry)
   def union(s1: Schedule, s2: Schedule): Schedule = Union(s1,s2)
