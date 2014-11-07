@@ -24,19 +24,19 @@ import scheduling.Instant
 import scheduling.Schedule
 import scheduling.TargetLike
 
-class AdhocRequestActorSpec extends SpecificationLike
-                               with NoTimeConversions {
+class RequestActorSpec extends SpecificationLike
+                          with NoTimeConversions {
 
-  "A AdhocRequestActor" should {
+  "A RequestActor" should {
 
-    "Poll the device when started" in new AdhocRequestActorContext {
-      val underTest = adhocRequestActor
+    "Poll the device when started" in new RequestActorContext {
+      val underTest = requestActor
       expectMsgType[Poll] must === (pollMsg)
     }
 
-    "Send results to the results bus" in new AdhocRequestActorContext {
+    "Send results to the results bus" in new RequestActorContext {
       val measurement: fakeDevice.Measurement = List((1,100), (2,200))
-      val underTest = adhocRequestActor
+      val underTest = requestActor
       underTest ! deviceDirectory.Protocol.Result(dt, measurement)
 
       val expected = List(Reading[fakeDevice.type](
@@ -45,14 +45,18 @@ class AdhocRequestActorSpec extends SpecificationLike
       fakeDeviceBus.readings must === (expected)
     }
 
-    "Throw an exception when a timeout is hit" in new AdhocRequestActorContext {
+    "Throw an exception when a timeout is hit" in new RequestActorContext {
+      (pending)
+    }
+
+    "Stop if the Schedule completes" in new RequestActorContext {
       (pending)
     }
   }
 
 }
 
-class AdhocRequestActorContext extends AkkaSpecs2Support {
+class RequestActorContext extends AkkaSpecs2Support {
 
   case class TestTarget() extends TargetLike {
     val initiateAt = basetime
@@ -76,9 +80,9 @@ class AdhocRequestActorContext extends AkkaSpecs2Support {
     val selection = new AddressSelection {}
   }
 
-  def request(t: TestTarget) = AdhocRequest[TestDevice](
+  def request(t: TestTarget) = Request[TestDevice](
     id = 1L,
-    target = t,
+    schedule = Schedule.single(3.seconds),
     device = fakeDevice,
     selection = fakeDevice.selection)
 
@@ -106,8 +110,8 @@ class AdhocRequestActorContext extends AkkaSpecs2Support {
     def unsubscribe(subscriber: ActorRef): Unit = ???
   }
 
-  def adhocRequestActor = TestActorRef(
-    new AdhocRequestActor[fakeDevice.type](
+  def requestActor = TestActorRef(
+    new RequestActor[fakeDevice.type](
       request(TestTarget()),
       deviceDirectory,
       fakeDeviceBus
