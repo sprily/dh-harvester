@@ -75,6 +75,8 @@ class DirectoryContext extends AkkaSpecs2Support with ImplicitSender {
       type NetLoc = String
       def netLocFor(d: FakeDevice) = d.address
       def workerProps(netLoc: NetLoc) = props
+      def directoryName = "fake"
+      def actorPathFor(loc: NetLoc) = loc
     }
   }
 
@@ -92,5 +94,5 @@ class DirectoryContext extends AkkaSpecs2Support with ImplicitSender {
     type Measurement = Double
   }
 
-  def fakeDevice = FakeDevice(DeviceId(10), "/home/device")
+  def fakeDevice = FakeDevice(DeviceId(10), "device-1")
 }
