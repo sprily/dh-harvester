@@ -9,9 +9,11 @@ import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
+import akka.actor.OneForOneStrategy
 import akka.actor.PoisonPill
 import akka.actor.Props
 import akka.actor.ReceiveTimeout
+import akka.actor.SupervisorStrategy._
 import akka.actor.Terminated
 
 import network.Device
@@ -49,6 +51,11 @@ class DeviceManagerActor(
     extends Actor with ActorLogging {
 
   import DeviceManagerActor.Protocol._
+  import RequestActor.PollingTimedOutException
+
+  override val supervisorStrategy = OneForOneStrategy() {
+    case _: PollingTimedOutException => Resume
+  }
 
   case class Child(dr: DeviceRequest, ref: ActorRef)
   var requests = Map[Long, Child]()
