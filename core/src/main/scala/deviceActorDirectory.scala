@@ -28,8 +28,11 @@ abstract class DeviceActorDirectoryImpl[D <: Device]
                                        (system: ActorSystem)
                                           extends DeviceActorDirectory[D] {
 
+  def directoryName: String
+  def actorPathFor(loc: NetLoc): String
+
   import Protocol.Poll
-  private val router = system.actorOf(Props(new Router()))
+  private val router = system.actorOf(Props(new Router()), directoryName)
   override def lookup(device: D) = system.actorSelection(router.path)
 
   /** Abstract members to define how to group Devices by network location. */
@@ -58,7 +61,7 @@ abstract class DeviceActorDirectoryImpl[D <: Device]
     def lookupActor(d: D): ActorRef = {
       val netLoc = netLocFor(d)
       if(! locs.contains(netLoc)) {
-        val a = context.actorOf(workerProps(netLoc))
+        val a = context.actorOf(workerProps(netLoc), actorPathFor(netLoc))
         context watch a
         locs += netLoc -> a
       }

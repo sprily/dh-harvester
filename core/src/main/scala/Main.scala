@@ -14,6 +14,8 @@ import modbus._
 import scheduling._
 import capture._
 
+import DeviceManagerActor.Protocol._
+
 object Main {
   def main(args: Array[String]): Unit = {
 
@@ -38,25 +40,39 @@ object Main {
 
     val system = ActorSystem("all-my-actors", config)
 
-    val req = Request[ModbusDevice](
+    val req1 = Request[ModbusDevice](
       1L,
-      Schedule.each(1.seconds),
+      Schedule.each(5.seconds),
       device,
       ModbusRegisterRange(50520, 4))
 
-    implicit val directory = new ModbusActorDirectory(system)
-    implicit val bus = new AkkaDeviceBus()
+    val req2 = Request[ModbusDevice](
+      2L,
+      Schedule.each(3.seconds).take(2).fixTimeoutTo(1.millis),
+      device,
+      ModbusRegisterRange(50524, 4))
+
+    val bus = new AkkaDeviceBus()
+    val provider = new DefaultDirectoryProvider(system)
+    val manager = system.actorOf(Props(
+      new DeviceManagerActor(provider, bus)), "device-manager")
 
     val printer = system.actorOf(Props(new Actor {
       def receive = {
         case o => println(s"RCVD: ${o}")
       }
-    }))
+    }), "printer")
     bus.subscribe(printer, device)
 
-    val poller = system.actorOf(RequestActor.props(req))
+    manager ! PersistentRequests(List(
+      ModbusRequest(req1),
+      ModbusRequest(req2)))
 
-    Thread.sleep(10000)
+    Thread.sleep(16000)
+
+    manager ! ModbusRequest(req2)
+
+    Thread.sleep(7000)
     system.shutdown()
   }
 }

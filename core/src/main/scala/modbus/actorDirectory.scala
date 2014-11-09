@@ -15,8 +15,12 @@ import network.TCPGateway
 class ModbusActorDirectory(system: ActorSystem)
     extends DeviceActorDirectoryImpl[ModbusDevice](system) {
 
+  override lazy val directoryName = "modbus-tcp"
   type NetLoc = TCPGateway
 
   def netLocFor(d: ModbusDevice) = d.address.gateway
   def workerProps(netLoc: NetLoc) = ConnectionActor.gateway(netLoc, this, 1)
+  def actorPathFor(netLoc: NetLoc) = {
+    List(netLoc.address, netLoc.port.toString).mkString(":")
+  }
 }
