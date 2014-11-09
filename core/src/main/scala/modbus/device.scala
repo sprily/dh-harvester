@@ -35,4 +35,12 @@ case class ModbusMeasurement(
     val range: ModbusRegisterRange,
     val words: Seq[Word16])
 
+object ModbusMeasurement {
+  implicit val serialiser: Serialiser[ModbusMeasurement] = new Serialiser[ModbusMeasurement] {
+    override def toBytes(m: ModbusMeasurement) = {
+      List()
+    }
+  }
+}
+
 case class Word16(s: Short) extends AnyRef
