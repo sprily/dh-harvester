@@ -3,12 +3,10 @@ package harvester
 package capture
 
 import scala.concurrent.duration._
-import scala.reflect.runtime.universe._
 
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
-import akka.actor.ActorSystem
 import akka.actor.OneForOneStrategy
 import akka.actor.PoisonPill
 import akka.actor.Props
@@ -16,34 +14,7 @@ import akka.actor.ReceiveTimeout
 import akka.actor.SupervisorStrategy._
 import akka.actor.Terminated
 
-import network.Device
-
 import modbus.ModbusDevice
-import modbus.ModbusActorDirectory
-
-trait DirectoryProvider {
-
-  protected val modbus: DeviceActorDirectory[ModbusDevice]
-
-  def lookup[D <: Device : TypeTag]
-            :Option[DeviceActorDirectory[D]] = typeOf[D] match {
-
-    case tt if tt =:= typeOfModbusDevice =>
-      Some(modbus.asInstanceOf[DeviceActorDirectory[D]])
-
-    case unknown => None
-  }
-
-  // Memoized for efficiency
-  private lazy val typeOfModbusDevice = typeOf[ModbusDevice]
-}
-
-class DefaultDirectoryProvider(system: ActorSystem)
-    extends DirectoryProvider {
-
-  override val modbus = new ModbusActorDirectory(system)
-
-}
 
 class DeviceManagerActor(
     provider: DirectoryProvider,
