@@ -8,6 +8,9 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 
 import scala.concurrent.duration._
+import scala.concurrent.Await
+
+import uk.co.sprily.mqtt._
 
 import network._
 import modbus._
@@ -48,21 +51,17 @@ object Main {
 
     val req2 = Request[ModbusDevice](
       2L,
-      Schedule.each(3.seconds).take(2).fixTimeoutTo(1.millis),
+      Schedule.each(3.seconds),
       device,
-      ModbusRegisterRange(50524, 4))
+      ModbusRegisterRange(50522, 4))
 
     val bus = new AkkaDeviceBus()
     val provider = new DefaultDirectoryProvider(system)
     val manager = system.actorOf(Props(
       new DeviceManagerActor(provider, bus)), "device-manager")
 
-    val printer = system.actorOf(Props(new Actor {
-      def receive = {
-        case o => println(s"RCVD: ${o}")
-      }
-    }), "printer")
-    bus.subscribe(printer, device)
+    val client = Await.result(AsyncSimpleClient.connect(MqttOptions.cleanSession()), 3.seconds)
+    val printer = system.actorOf(mqtt.ResultsPublisher.props("test-org", device, bus, client))
 
     manager ! PersistentRequests(List(
       ModbusRequest(req1),
@@ -74,5 +73,6 @@ object Main {
 
     Thread.sleep(7000)
     system.shutdown()
+    AsyncSimpleClient.disconnect(client)
   }
 }
