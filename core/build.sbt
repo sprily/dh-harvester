@@ -9,7 +9,3 @@ libraryDependencies += "org.joda" % "joda-convert" % "1.7"
 libraryDependencies += "uk.co.sprily" % "com.ghgande.j2mod" % "1.03"
 
 libraryDependencies += "uk.co.sprily" %% "scala-mqtt-core" % "0.1-SNAPSHOT"
-
-resolvers += "Sprily 3rd Party" at "http://repo.sprily.co.uk/nexus/content/repositories/thirdparty"
-
-resolvers += "Sprily Snapshots" at "http://repo.sprily.co.uk/nexus/content/repositories/snapshots"

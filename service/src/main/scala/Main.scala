@@ -19,8 +19,8 @@ import capture._
 
 import DeviceManagerActor.Protocol._
 
-object Main {
-  def main(args: Array[String]): Unit = {
+object Main extends App {
+  //def main(args: Array[String]): Unit = {
 
     import com.typesafe.config._
 
@@ -72,5 +72,5 @@ object Main {
 
     system.shutdown()
     AsyncSimpleClient.disconnect(client)
-  }
+  //}
 }
