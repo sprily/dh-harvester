@@ -38,9 +38,12 @@ case class ModbusMeasurement(
 object ModbusMeasurement {
   implicit val serialiser: Serialiser[ModbusMeasurement] = new Serialiser[ModbusMeasurement] {
     override def toBytes(m: ModbusMeasurement) = {
-      List()
+      m.words.flatMap(_.bytes)
     }
   }
 }
 
-case class Word16(s: Short) extends AnyRef
+case class Word16(s: Short) extends AnyRef {
+  def bytes: Seq[Byte] = List((s >> 16).asInstanceOf[Byte],
+                              (s & 0xff).asInstanceOf[Byte])
+}
