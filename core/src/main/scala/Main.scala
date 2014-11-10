@@ -45,13 +45,13 @@ object Main {
 
     val req1 = Request[ModbusDevice](
       1L,
-      Schedule.each(5.seconds),
+      Schedule.each(300.millis).fixTimeoutTo(1.seconds),
       device,
       ModbusRegisterRange(50520, 4))
 
     val req2 = Request[ModbusDevice](
       2L,
-      Schedule.each(3.seconds),
+      Schedule.each(300.millis).delayBy(150.millis).fixTimeoutTo(2.seconds),
       device,
       ModbusRegisterRange(50522, 4))
 
@@ -67,11 +67,9 @@ object Main {
       ModbusRequest(req1),
       ModbusRequest(req2)))
 
-    Thread.sleep(16000)
+    println("Press enter to stop")
+    readLine()
 
-    manager ! ModbusRequest(req2)
-
-    Thread.sleep(7000)
     system.shutdown()
     AsyncSimpleClient.disconnect(client)
   }
