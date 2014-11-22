@@ -21,7 +21,7 @@ val commitId = SettingKey[Option[String]]("commitId", "Used to identify the comm
 
 buildCount := Option(System.getenv().get("GO_PIPELINE_COUNTER"))
 
-commitId := Option(System.getenv().get("GO_REVISION"))
+commitId := Option(System.getenv().get("GO_REVISION")).map(_.take(8))
 
 version in Debian <<= (version, buildCount, commitId) { (v, build, commit) =>
   val buildStr = build.map("-" + _).getOrElse("")
