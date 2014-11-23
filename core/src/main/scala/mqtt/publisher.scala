@@ -44,6 +44,7 @@ trait ResultsPublisher[D <: Device, M[+_], CM <: ClientModule[M]]
   }
 
   def receive = {
+    // cast is safe due to `bus.subscribe(self, device)` in preStart
     case (r: Reading[_]) => publish(r.asInstanceOf[Reading[D]])
   }
 
@@ -54,7 +55,7 @@ trait ResultsPublisher[D <: Device, M[+_], CM <: ClientModule[M]]
     client.publish(topic, payload)
   }
 
-  private def topicFor(reading: Reading[D]) = Topic(s"${topicRoot}/${reading.device.id}")
+  private def topicFor(reading: Reading[D]) = Topic(s"${topicRoot}/${reading.device.id.v}")
 
 }
 
