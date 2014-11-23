@@ -8,6 +8,8 @@ import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.Props
 
+import org.joda.time.LocalDateTime
+
 import uk.co.sprily.mqtt.ClientModule
 import uk.co.sprily.mqtt.Topic
 
@@ -50,12 +52,20 @@ trait ResultsPublisher[D <: Device, M[+_], CM <: ClientModule[M]]
 
   def publish(reading: Reading[D]) = {
     val topic = topicFor(reading)
-    val payload = serialiser.toBytes(reading.measurement).toArray
+    val payload = serialise(reading).toArray
     log.debug(s"Publishing to $topic: $payload")
     client.publish(topic, payload)
   }
 
   private def topicFor(reading: Reading[D]) = Topic(s"${topicRoot}/${reading.device.id.v}")
+
+  /** Note that no serialisation of Device data takes place, this is because
+    * it's already communicated in the topic path
+    */
+  private def serialise(r: Reading[D]) = {
+    implicitly[Serialiser[LocalDateTime]].toBytes(r.timestamp) ++
+    serialiser.toBytes(r.measurement)
+  }
 
 }
 
