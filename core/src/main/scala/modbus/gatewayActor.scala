@@ -19,6 +19,7 @@ import com.ghgande.j2mod.modbus.net._
 import com.ghgande.j2mod.modbus.util._
 
 import org.joda.time.LocalDateTime
+import org.joda.time.DateTimeZone
 
 import harvester.network.TCPGateway
 
@@ -53,6 +54,7 @@ class ConnectionActor(
                                                              with ActorLogging {
 
   import directory.Protocol._
+  val UTC = DateTimeZone.UTC
 
   var conn: TCPMasterConnection = _
 
@@ -88,7 +90,7 @@ class ConnectionActor(
       p.selection,
     res.getRegisters.map(r => Word16(r.toShort)).toSeq)
 
-    sender ! Result(LocalDateTime.now(), m)
+    sender ! Result(LocalDateTime.now(UTC), m)
   }
 
   private def connectIfNecessary(): Unit = {
