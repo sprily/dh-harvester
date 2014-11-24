@@ -45,7 +45,7 @@ class ResultsPublisherSpec extends SpecificationLike
         values = ByteString.fromString("payload-data"))
 
       underTest ! reading(measurement)
-      expectMsgType[(Topic,Array[Byte])]._1 must === (Topic("root/sub-root/10"))
+      expectMsgType[(Topic,Array[Byte])]._1 must === (Topic("root/sub-root/10/data/raw"))
     }
 
   }

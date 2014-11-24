@@ -61,7 +61,7 @@ trait ResultsPublisher[D <: Device, M[+_], CM <: ClientModule[M]]
     client.publish(topic, payload)
   }
 
-  private def topicFor(reading: Reading[D]) = Topic(s"${topicRoot}/${reading.device.id.v}")
+  private def topicFor(reading: Reading[D]) = Topic(s"${topicRoot}/${reading.device.id.v}/data/raw")
 
   /** Note that no serialisation of Device data takes place, this is because
     * it's already communicated in the topic path
