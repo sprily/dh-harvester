@@ -39,7 +39,7 @@ class ResultsPublisherSpec extends SpecificationLike
   "A ResultsPublisher" should {
 
     "Publish to the correct MQTT topic" in new PublisherContext {
-      val underTest = publisher(topicRoot = "root/sub-root")
+      val underTest = publisher(topicRoot = Topic("root/sub-root"))
       val measurement = ModbusMeasurement(
         range = ModbusRegisterRange(50210, 50220),
         values = ByteString.fromString("payload-data"))
@@ -57,7 +57,7 @@ class PublisherContext extends AkkaSpecs2Support {
   type Id[+T] = T
   type Seq[+A] = scala.collection.immutable.Seq[A]
 
-  def publisher(topicRoot: String) = {
+  def publisher(topicRoot: Topic) = {
     TestActorRef(
       ResultsPublisher[ModbusDevice,Id,ClientModule[Id]](
         topicRoot,

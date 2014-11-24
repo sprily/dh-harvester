@@ -33,7 +33,7 @@ trait ResultsPublisher[D <: Device, M[+_], CM <: ClientModule[M]]
     extends Actor with ActorLogging {
 
   // Abstract fields
-  val topicRoot: String
+  val topicRoot: Topic
   val device: D
   val bus: DeviceBus
   val module: CM
@@ -61,7 +61,7 @@ trait ResultsPublisher[D <: Device, M[+_], CM <: ClientModule[M]]
     client.publish(topic, payload)
   }
 
-  private def topicFor(reading: Reading[D]) = Topic(s"${topicRoot}/${reading.device.id.v}/data/raw")
+  private def topicFor(reading: Reading[D]) = Topic(s"${topicRoot.path}/${reading.device.id.v}/data/raw")
 
   /** Note that no serialisation of Device data takes place, this is because
     * it's already communicated in the topic path
@@ -78,7 +78,7 @@ trait ResultsPublisher[D <: Device, M[+_], CM <: ClientModule[M]]
 object ResultsPublisher {
 
   def apply[D <: Device, M[+_], CM <: ClientModule[M]]
-           (_topicRoot: String,
+           (_topicRoot: Topic,
             _d: D,
             _bus: DeviceBus,
             _module: CM)
@@ -94,7 +94,7 @@ object ResultsPublisher {
     }
   }
   def props[D <: Device, M[+_], CM <: ClientModule[M]]
-           (topicRoot: String,
+           (topicRoot: Topic,
             d: D,
             bus: DeviceBus,
             module: CM)
