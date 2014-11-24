@@ -2,9 +2,16 @@ package uk.co.sprily.dh
 package harvester
 package modbus
 
+import akka.util.ByteString
+
+import scodec._
+import codecs._
+
 import harvester.network.Device
 import harvester.network.DeviceId
 import harvester.network.TCPGateway
+
+import protocols.codecs
 
 case class ModbusDeviceAddress(
     val deviceNumber: Byte,
@@ -27,23 +34,21 @@ case class ModbusDevice(
   *
   * Modbus defines a register value to be a 16-bit wide word.
   * Some devices use this to encode an unsigned short, others
-  * a signed short, some even use it to encode bit fields.  So
-  * treat the values as words, and interpret their meaning higher
+  * a signed short, some even use it to encode bit fields.  Rather
+  * than interpreting their meaning, we just store the raw bytes
+  * as an immutable ByteString, and  interpret their meaning higher
   * up the chain where we know the make and model of the device.
   */
 case class ModbusMeasurement(
     val range: ModbusRegisterRange,
-    val words: Seq[Word16])
+    val values: ByteString)
 
 object ModbusMeasurement {
-  implicit val serialiser: Serialiser[ModbusMeasurement] = new Serialiser[ModbusMeasurement] {
-    override def toBytes(m: ModbusMeasurement) = {
-      m.words.flatMap(_.bytes)
-    }
-  }
-}
 
-case class Word16(s: Short) extends AnyRef {
-  def bytes: Seq[Byte] = List((s >> 16).asInstanceOf[Byte],
-                              (s & 0xff).asInstanceOf[Byte])
+  implicit val codec: Codec[ModbusMeasurement] = {
+    val rangeCodec = (uint16 :: uint16).as[ModbusRegisterRange]
+    val valuesCodec = variableSizeBits(uint8, codecs.byteString)
+    (rangeCodec :: valuesCodec).as[ModbusMeasurement]
+  }
+
 }

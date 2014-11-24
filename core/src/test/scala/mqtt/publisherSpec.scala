@@ -8,12 +8,12 @@ import scala.concurrent.duration._
 
 import akka.actor.ActorRef
 import akka.testkit.TestActorRef
+import akka.util.ByteString
 
 import org.joda.time.LocalDateTime
 
 import org.specs2.mutable.SpecificationLike
 import org.specs2.time.NoTimeConversions
-
 
 import uk.co.sprily.mqtt.AtLeastOnce
 import uk.co.sprily.mqtt.ClientModule
@@ -22,11 +22,11 @@ import uk.co.sprily.mqtt.MqttOptions
 import uk.co.sprily.mqtt.QoS
 import uk.co.sprily.mqtt.Topic
 import uk.co.sprily.mqtt.TopicPattern
+
 import modbus.ModbusDevice
 import modbus.ModbusDeviceAddress
 import modbus.ModbusMeasurement
 import modbus.ModbusRegisterRange
-import modbus.Word16
 
 import network.Device
 import network.DeviceId
@@ -42,7 +42,7 @@ class ResultsPublisherSpec extends SpecificationLike
       val underTest = publisher(topicRoot = "root/sub-root")
       val measurement = ModbusMeasurement(
         range = ModbusRegisterRange(50210, 50220),
-        words = List(Word16(0xff), Word16(0xf0)))
+        values = ByteString.fromString("payload-data"))
 
       underTest ! reading(measurement)
       expectMsgType[(Topic,Array[Byte])]._1 must === (Topic("root/sub-root/10"))

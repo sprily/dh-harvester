@@ -53,7 +53,7 @@ object Main extends App {
       2L,
       Schedule.each(300.millis).delayBy(150.millis).fixTimeoutTo(2.seconds),
       device,
-      ModbusRegisterRange(50522, 4))
+      ModbusRegisterRange(50522, 8))
 
     val bus = new AkkaDeviceBus()
     val provider = new DefaultDirectoryProvider(system)

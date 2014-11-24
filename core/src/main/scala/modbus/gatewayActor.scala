@@ -11,6 +11,7 @@ import akka.actor.OneForOneStrategy
 import akka.actor.Props
 import akka.actor.SupervisorStrategy._
 import akka.routing.RoundRobinPool
+import akka.util.ByteString
 
 import com.ghgande.j2mod.modbus._
 import com.ghgande.j2mod.modbus.msg._
@@ -88,7 +89,7 @@ class ConnectionActor(
     val res = tx.getResponse().asInstanceOf[ReadMultipleRegistersResponse]
     val m = ModbusMeasurement(
       p.selection,
-    res.getRegisters.map(r => Word16(r.toShort)).toSeq)
+      res.getRegisters.map(reg => ByteString(reg.toBytes)).reduce(_ ++ _))
 
     sender ! Result(LocalDateTime.now(UTC), m)
   }

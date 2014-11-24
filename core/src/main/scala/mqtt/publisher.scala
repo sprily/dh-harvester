@@ -10,10 +10,14 @@ import akka.actor.Props
 
 import org.joda.time.LocalDateTime
 
+import scodec.Codec
+
 import uk.co.sprily.mqtt.ClientModule
 import uk.co.sprily.mqtt.Topic
 
 import network.Device
+
+import protocols.codecs
 
 /** A publisher of results from a given device.
   *
@@ -34,7 +38,7 @@ trait ResultsPublisher[D <: Device, M[+_], CM <: ClientModule[M]]
   val bus: DeviceBus
   val module: CM
   val client: module.Client
-  implicit val serialiser: Serialiser[D#Measurement]
+  implicit val codec: Codec[D#Measurement]
 
   import module._
 
@@ -52,8 +56,8 @@ trait ResultsPublisher[D <: Device, M[+_], CM <: ClientModule[M]]
 
   def publish(reading: Reading[D]) = {
     val topic = topicFor(reading)
-    val payload = serialise(reading).toArray
-    log.debug(s"Publishing to $topic: $payload")
+    val payload: Array[Byte] = serialise(reading).toByteArray
+    log.info(s"Publishing to $topic: ${payload.length}")
     client.publish(topic, payload)
   }
 
@@ -63,8 +67,10 @@ trait ResultsPublisher[D <: Device, M[+_], CM <: ClientModule[M]]
     * it's already communicated in the topic path
     */
   private def serialise(r: Reading[D]) = {
-    implicitly[Serialiser[LocalDateTime]].toBytes(r.timestamp) ++
-    serialiser.toBytes(r.measurement)
+    (for {
+      tsBV <- codecs.localDateTime.encode(r.timestamp)
+      mBV  <- codec.encode(r.measurement)
+    } yield tsBV ++ mBV).getOrElse(???)
   }
 
 }
@@ -77,14 +83,14 @@ object ResultsPublisher {
             _bus: DeviceBus,
             _module: CM)
            (_client: _module.Client)
-           (implicit s: Serialiser[D#Measurement]): ResultsPublisher[D,M,CM] = {
+           (implicit c: Codec[D#Measurement]): ResultsPublisher[D,M,CM] = {
     new ResultsPublisher[D,M,CM] {
       lazy val topicRoot = _topicRoot
       lazy val device = _d
       lazy val bus = _bus
       lazy val module = _module
       lazy val client = _client.asInstanceOf[module.Client]
-      lazy val serialiser = s
+      lazy val codec = c
     }
   }
   def props[D <: Device, M[+_], CM <: ClientModule[M]]
@@ -93,7 +99,7 @@ object ResultsPublisher {
             bus: DeviceBus,
             module: CM)
            (client: module.Client)
-           (implicit s: Serialiser[D#Measurement]): Props = {
+           (implicit s: Codec[D#Measurement]): Props = {
     Props(ResultsPublisher[D,M,CM](topicRoot, d, bus, module)(client))
   }
 }
