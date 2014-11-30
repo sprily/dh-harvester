@@ -59,11 +59,11 @@ class PublisherContext extends AkkaSpecs2Support {
 
   def publisher(topicRoot: Topic) = {
     TestActorRef(
-      ResultsPublisher[ModbusDevice,Id,ClientModule[Id]](
+      new ResultsPublisher[ModbusDevice,Id](
         topicRoot,
         modbusDevice,
         fakeBus,
-        fakeModule)(fakeClient)
+        fakeClient)
     )
   }
 
@@ -86,7 +86,7 @@ class PublisherContext extends AkkaSpecs2Support {
 
   lazy val fakeModule = new ClientModule[Id] {
     import scala.concurrent.ExecutionContext.Implicits.global
-    case class Client()
+    case class Client() extends ClientLike
     override def connect(options: MqttOptions) = Future { Client() }
     override def disconnect(client: Client) = Future { () }
     override def status(client: Client) = ???

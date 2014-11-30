@@ -20,27 +20,13 @@ import network.Device
 import protocols.codecs
 
 /** A publisher of results from a given device.
-  *
-  * There's a large song-and-dance over the dependent type, `module.Client`,
-  * because there's no way to have classes with dependently typed constructor
-  * arguments.  The workaround is to define what would be the constructor
-  * arguments as abstract fields in a trait, and then use the apply method
-  * on the companion object to construct new instantiations of
-  * ResultsPublisher.  It's not pretty, and really it's because of an
-  * oversight in the scala-mqtt API, which may well be fixed soon.
   */
-trait ResultsPublisher[D <: Device, M[+_], CM <: ClientModule[M]]
-    extends Actor with ActorLogging {
-
-  // Abstract fields
-  val topicRoot: Topic
-  val device: D
-  val bus: DeviceBus
-  val module: CM
-  val client: module.Client
-  implicit val codec: Codec[D#Measurement]
-
-  import module._
+class ResultsPublisher[D <: Device,M[+_]](
+    val topicRoot: Topic,
+    val device: D,
+    val bus: DeviceBus,
+    val client: ClientModule[M]#Client)(implicit val codec: Codec[D#Measurement])
+  extends Actor with ActorLogging {
 
   // akka hooks.
   // perform bus subscription upon *first* initialisation only
@@ -77,29 +63,13 @@ trait ResultsPublisher[D <: Device, M[+_], CM <: ClientModule[M]]
 
 object ResultsPublisher {
 
-  def apply[D <: Device, M[+_], CM <: ClientModule[M]]
-           (_topicRoot: Topic,
-            _d: D,
-            _bus: DeviceBus,
-            _module: CM)
-           (_client: _module.Client)
-           (implicit c: Codec[D#Measurement]): ResultsPublisher[D,M,CM] = {
-    new ResultsPublisher[D,M,CM] {
-      lazy val topicRoot = _topicRoot
-      lazy val device = _d
-      lazy val bus = _bus
-      lazy val module = _module
-      lazy val client = _client.asInstanceOf[module.Client]
-      lazy val codec = c
-    }
-  }
-  def props[D <: Device, M[+_], CM <: ClientModule[M]]
+  def props[D <: Device, M[+_]]
            (topicRoot: Topic,
             d: D,
             bus: DeviceBus,
-            module: CM)
-           (client: module.Client)
+            client: ClientModule[M]#Client)
            (implicit s: Codec[D#Measurement]): Props = {
-    Props(ResultsPublisher[D,M,CM](topicRoot, d, bus, module)(client))
+    Props(new ResultsPublisher[D,M](topicRoot, d, bus, client))
   }
+
 }

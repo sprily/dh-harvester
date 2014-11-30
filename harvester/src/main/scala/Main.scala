@@ -61,7 +61,9 @@ object Main extends App {
       new DeviceManagerActor(provider, bus)), "device-manager")
 
     val client = Await.result(AsyncSimpleClient.connect(MqttOptions.cleanSession()), 3.seconds)
-    val printer = system.actorOf(mqtt.ResultsPublisher.props[ModbusDevice,Cont,AsyncSimpleClient.type](Topic("test-org"), device, bus, AsyncSimpleClient)(client))
+    val printer = system.actorOf(
+      mqtt.ResultsPublisher.props(Topic("test-org"), device, bus, client)
+    )
 
     manager ! PersistentRequests(List(
       ModbusRequest(req1),
