@@ -77,7 +77,7 @@ class ConnectionActor(
 
     val req = new ReadMultipleRegistersRequest(
       p.selection.startRegister,
-      p.selection.endRegister)
+      p.selection.numRegisters)
     req.setUnitID(p.d.address.deviceNumber)
 
     val tx = new ModbusTCPTransaction(conn)

@@ -17,9 +17,16 @@ case class ModbusDeviceAddress(
     val deviceNumber: Byte,
     val gateway: TCPGateway)
 
+/** Inclusive range **/
 case class ModbusRegisterRange(
     val startRegister: Int,
-    val endRegister: Int)
+    val endRegister: Int) {
+
+  assert (startRegister <= endRegister)
+
+  val numRegisters = endRegister - startRegister + 1
+
+}
 
 case class ModbusDevice(
     val id: DeviceId,
