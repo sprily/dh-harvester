@@ -13,6 +13,7 @@ import akka.actor.ActorSelection
 import akka.actor.Props
 import akka.testkit.TestActorRef
 import akka.testkit.TestKit
+import akka.util.ByteString
 
 import org.joda.time.LocalDateTime
 
@@ -132,7 +133,7 @@ class DMTestContext extends AkkaSpecs2Support {
     LocalDateTime.now(),
     ModbusMeasurement(
       ModbusRegisterRange(1,100),
-      List()))
+      ByteString.empty))
 
   lazy val directory: DeviceActorDirectory[ModbusDevice] = new DeviceActorDirectory[ModbusDevice] {
     def lookup(d: ModbusDevice) = {
