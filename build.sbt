@@ -23,3 +23,5 @@ libraryDependencies in ThisBuild += "org.specs2" %% "specs2-scalacheck" % "2.4.6
 resolvers in ThisBuild += "Sprily 3rd Party" at "http://repo.sprily.co.uk/nexus/content/repositories/thirdparty"
 
 resolvers in ThisBuild += "Sprily Snapshots" at "http://repo.sprily.co.uk/nexus/content/repositories/snapshots"
+
+resolvers in ThisBuild += "Spray Releases" at "http://repo.spray.io"

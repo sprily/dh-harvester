@@ -16,4 +16,8 @@ case class IP4Address(raw: (Byte, Byte, Byte, Byte)) extends IPAddress {
 
 object IP4Address {
   lazy val localhost = IP4Address((127,0,0,1))
+  def fromString(host: String): Option[IP4Address] = host match {
+    case "localhost" => Some(localhost)
+    case _           => None
+  }
 }

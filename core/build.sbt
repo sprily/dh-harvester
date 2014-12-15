@@ -11,3 +11,5 @@ libraryDependencies += "org.typelevel" %% "scodec-core" % "1.5.0"
 libraryDependencies += "uk.co.sprily" % "com.ghgande.j2mod" % "1.03"
 
 libraryDependencies += "uk.co.sprily" %% "scala-mqtt-core" % "0.1-SNAPSHOT"
+
+libraryDependencies += "io.spray" %%  "spray-json" % "1.3.1"

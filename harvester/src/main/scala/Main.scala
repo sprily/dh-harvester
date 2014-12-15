@@ -68,6 +68,7 @@ object Main extends App {
   val schedule = Schedule.each(1.seconds).fixTimeoutTo(3.seconds)
   val bus = new AkkaResponseBus()
   val client = Await.result(AsyncSimpleClient.connect(MqttOptions.cleanSession()), 3.seconds)
+  val reqs = system.actorOf(mqtt.Requests.props(client), "mqtt-requests-rcvr")
 
   val manager = system.actorOf(Props(
     new RequestActorManager(bus)),
