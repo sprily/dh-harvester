@@ -1,6 +1,8 @@
 package uk.co.sprily.dh
 package harvester
 
+import akka.actor.Actor
+import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 
@@ -21,4 +23,12 @@ class AkkaSpecs2Support extends TestKit(ActorSystem("test-system"))
   override def after = {
     system.shutdown()
   }
+
+  /** An Actor that forwards all messages on to a next Actor **/
+  class ForwardingActor(next: ActorRef = testActor) extends Actor {
+    def receive = {
+      case msg => next forward msg
+    }
+  }
+
 }
