@@ -4,7 +4,9 @@ package capture
 
 import scala.concurrent.duration._
 
+import akka.actor.ActorRef
 import akka.actor.Props
+import akka.testkit.ImplicitSender
 import akka.testkit.TestActorRef
 
 import org.specs2.mutable.SpecificationLike
@@ -13,36 +15,36 @@ import org.specs2.time.NoTimeConversions
 import network.Device
 import network.DeviceId
 
-class DeviceActorSpec extends SpecificationLike
-                         with NoTimeConversions {
+class DeviceActorDirectorySpec extends SpecificationLike
+                                  with NoTimeConversions {
 
-  "A DeviceActor" should {
+  "A DeviceActorDirectory" should {
 
-    import DeviceActor.Protocol._
+    import DeviceActorDirectory2.Protocol._
 
     "accept new registrations" in new DeviceActorTestContext {
 
       val underTest = deviceActor
-      underTest ! RegisterDevice { case d@AnotherFakeDevice() => ??? }
-      underTest ! RegisterDevice { case d@FakeDevice(_) => props(d) }
-      underTest ! RegisterDevice { case d@AnotherFakeDevice() => ??? }
-      underTest ! SampleDevice(testRequest(1))
+      underTest ! Register { case d@AnotherFakeDevice() => ??? }
+      underTest ! Register { case d@FakeDevice(_)       => props(d) }
+      underTest ! Register { case d@AnotherFakeDevice() => ??? }
+      underTest ! Lookup(FakeDevice(DeviceId(1)))
 
-      expectMsgType[SampleDevice] must === (SampleDevice(testRequest(1)))
+      expectMsgType[ActorRef]
     }
 
     "only forward to the matching child" in new DeviceActorTestContext {
       val underTest = deviceActor
-      underTest ! RegisterDevice { case d@AnotherFakeDevice() => ??? }
-      underTest ! SampleDevice(testRequest(1))
+      underTest ! Register { case d@AnotherFakeDevice() => ??? }
+      underTest ! Lookup(FakeDevice(DeviceId(1)))
       expectNoMsg(200.millis)
     }
 
   }
 
-  class DeviceActorTestContext extends AkkaSpecs2Support {
+  class DeviceActorTestContext extends AkkaSpecs2Support with ImplicitSender {
 
-    def deviceActor = TestActorRef(new DeviceActor())
+    def deviceActor = TestActorRef(new DeviceActorDirectory2())
 
     case class FakeDevice(id: DeviceId) extends Device {
       type Address = String
@@ -53,11 +55,6 @@ class DeviceActorSpec extends SpecificationLike
 
     def props(d: FakeDevice): Props = Props(new ForwardingActor())
 
-    case class FakeDeviceRequest(device: FakeDevice) extends Request2 {
-      type D = FakeDevice
-      val selection = 10
-    }
-
     case class AnotherFakeDevice() extends Device {
       type Address = String
       type AddressSelection = String
@@ -66,7 +63,6 @@ class DeviceActorSpec extends SpecificationLike
       def address = "not-used"
     }
 
-    def testRequest(id: Long) = FakeDeviceRequest(FakeDevice(DeviceId(id)))
   }
 
 }
