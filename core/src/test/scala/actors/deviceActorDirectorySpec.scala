@@ -33,11 +33,19 @@ class DeviceActorDirectorySpec extends SpecificationLike
       expectMsgType[ActorRef]
     }
 
-    "only forward to the matching child" in new DeviceActorTestContext {
+    "only lookup the matching child" in new DeviceActorTestContext {
       val underTest = deviceActor
       underTest ! Register { case d@AnotherFakeDevice() => ??? }
       underTest ! Lookup(FakeDevice(DeviceId(1)))
       expectNoMsg(200.millis)
+    }
+
+    "forward to the matching child" in new DeviceActorTestContext {
+      val underTest = deviceActor
+      underTest ! Register { case d@FakeDevice(_)       => props(d) }
+      underTest ! Forward(FakeDevice(DeviceId(1)), "a message")
+
+      expectMsgType[String] must === ("a message")
     }
 
   }

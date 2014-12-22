@@ -35,13 +35,16 @@ abstract class ActorDirectory extends Actor with ActorLogging {
   private[this] var registeredProps: PropsFactory[Key] = Map.empty
 
   final def receive = {
-    case msg@Lookup(key) =>
+    case Lookup(key) =>
       lookup(key) match {
         case Some(child) => sender ! child
         case None        => log.error(s"No Actor found for $key")
       }
 
-    case msg@Register(propsF) =>
+    case Forward(key, msg) =>
+      lookup(key) foreach (_ forward msg)
+
+    case Register(propsF) =>
       registeredProps = propsF orElse registeredProps
 
   }
@@ -81,6 +84,9 @@ object ActorDirectory {
 
     /** Register a function that creates a new `Props` for a given `k: K` **/
     case class Register(props: PropsFactory[K])
+
+    /** Forward the given message to the `ActorRef` looked-up by the key **/
+    case class Forward(key: K, msg: Any)
   }
 
 }
