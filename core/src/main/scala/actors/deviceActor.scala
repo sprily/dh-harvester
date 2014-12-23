@@ -2,6 +2,8 @@ package uk.co.sprily.dh
 package harvester
 package capture
 
+import akka.actor.Props
+
 import network.Device
 
 class DeviceActorDirectory2 extends ActorDirectory {
@@ -13,4 +15,5 @@ class DeviceActorDirectory2 extends ActorDirectory {
 object DeviceActorDirectory2 {
   object Protocol extends ActorDirectory.Protocol[Device]
   def name = "device-actor-directory"
+  def props = Props(new DeviceActorDirectory2())
 }

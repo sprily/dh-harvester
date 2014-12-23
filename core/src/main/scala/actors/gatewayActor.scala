@@ -22,5 +22,6 @@ class GatewayActorDirectory extends ActorDirectory {
 object GatewayActorDirectory {
   object Protocol extends ActorDirectory.Protocol[TCPGateway]
   def name = "gw-actor-directory"
+  def props = Props(new GatewayActorDirectory())
 }
 
