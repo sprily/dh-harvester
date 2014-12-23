@@ -16,7 +16,7 @@ import scheduling.TargetLike
 class RequestActor(
     val request: Request,
     val schedule: Schedule,
-    val bus: DeviceBus) extends Actor with ActorLogging {
+    val bus: ResponseBus) extends Actor with ActorLogging {
 
   import RequestActor._
   import RequestActor.Protocol._
@@ -81,7 +81,7 @@ class RequestActor(
 
 object RequestActor {
 
-  def props(request: Request, schedule: Schedule, bus: DeviceBus): Props = Props(
+  def props(request: Request, schedule: Schedule, bus: ResponseBus): Props = Props(
     new RequestActor(request, schedule, bus)
   )
 

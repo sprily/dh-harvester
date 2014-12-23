@@ -42,7 +42,7 @@ class RequestActorSpec extends SpecificationLike
       val expected = List(Reading[fakeDevice.type](
         dt, fakeDevice, measurement))
       
-      fakeDeviceBus.readings must === (expected)
+      fakeResponseBus.readings must === (expected)
     }
 
     "Throw an exception when a timeout is hit" in new RequestActorContext {
@@ -97,7 +97,7 @@ class RequestActorContext extends AkkaSpecs2Support {
     fakeDevice.selection
   )
 
-  lazy val fakeDeviceBus = new DeviceBus {
+  lazy val fakeResponseBus = new ResponseBus {
 
     var readings = List[Reading[Device]]()
 
@@ -114,7 +114,7 @@ class RequestActorContext extends AkkaSpecs2Support {
     new RequestActor[fakeDevice.type](
       request(TestTarget()),
       deviceDirectory,
-      fakeDeviceBus
+      fakeResponseBus
     )
   )
 

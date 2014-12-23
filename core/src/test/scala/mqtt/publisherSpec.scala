@@ -75,7 +75,7 @@ class PublisherContext extends AkkaSpecs2Support {
         address = IP4Address.localhost,
         port = 5432)))
 
-  lazy val fakeBus = new DeviceBus {
+  lazy val fakeBus = new ResponseBus {
     def publish[D <: Device](r: Reading[D]) = noOp
     def subscribe[D <: Device](s: ActorRef, d: D) = true
     def unsubscribe[D <: Device](s: ActorRef, d: D) = true

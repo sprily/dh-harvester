@@ -108,7 +108,7 @@ class DMTestContext extends AkkaSpecs2Support {
   type Poll = directory.Protocol.Poll
   type Result = directory.Protocol.Result
   
-  lazy val fakeDeviceBus = new DeviceBus {
+  lazy val fakeResponseBus = new ResponseBus {
 
     var readings = List[Reading[Device]]()
 
@@ -164,6 +164,6 @@ class DMTestContext extends AkkaSpecs2Support {
     selection = ModbusRegisterRange(11,20))
 
   def manager = TestActorRef(
-    new DeviceManagerActor(fakeProvider, fakeDeviceBus))
+    new DeviceManagerActor(fakeProvider, fakeResponseBus))
 
 }

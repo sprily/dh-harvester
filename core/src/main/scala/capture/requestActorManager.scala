@@ -18,7 +18,7 @@ import modbus.ModbusDevice
 import network.Device
 
 /** Manages the set of active RequestActors **/
-class RequestActorManager(bus: DeviceBus) extends Actor
+class RequestActorManager(bus: ResponseBus) extends Actor
                                              with ActorLogging {
 
   import RequestActorManager.Child
