@@ -10,6 +10,7 @@ trait Request {
   type D <: Device
   type Selection = D#AddressSelection
 
+  val id: Long
   val device: D
   val selection: Selection
 }
