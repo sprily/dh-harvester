@@ -143,9 +143,10 @@ class ModbusGatewayActor(gateway: TCPGateway) extends Actor
     tx.setRequest(req)
 
     log.debug(s"Executing modbus transaction: ${r.selection}")
-    tx.execute()  // blocking
+    tx.execute()  // blocking -- TODO: may raise NullPointerException if connection lost
     log.debug(s"Transaction completed")
     val res = tx.getResponse().asInstanceOf[ReadMultipleRegistersResponse]
+    log.debug(s"RES: $res") // TODO: res == null => failed transaction (connection accepted, but not completed?)
     val m = ModbusMeasurement(
       r.selection,
       res.getRegisters.map(reg => ByteString(reg.toBytes)).reduce(_ ++ _))
