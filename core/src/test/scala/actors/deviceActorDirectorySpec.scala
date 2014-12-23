@@ -26,7 +26,7 @@ class DeviceActorDirectorySpec extends SpecificationLike
 
       val underTest = deviceActor
       underTest ! Register { case d@AnotherFakeDevice() => ??? }
-      underTest ! Register { case d@FakeDevice(_)       => props(d) }
+      underTest ! Register { case d@FakeDevice(_)       => discard }
       underTest ! Register { case d@AnotherFakeDevice() => ??? }
       underTest ! Lookup(FakeDevice(DeviceId(1)))
 
@@ -42,7 +42,7 @@ class DeviceActorDirectorySpec extends SpecificationLike
 
     "forward to the matching child" in new DeviceActorTestContext {
       val underTest = deviceActor
-      underTest ! Register { case d@FakeDevice(_)       => props(d) }
+      underTest ! Register { case d@FakeDevice(_) => reply }
       underTest ! Forward(FakeDevice(DeviceId(1)), "a message")
 
       expectMsgType[String] must === ("a message")
@@ -61,7 +61,9 @@ class DeviceActorDirectorySpec extends SpecificationLike
       def address = "not-so-unique-address"
     }
 
-    def props(d: FakeDevice): Props = Props(new ForwardingActor())
+    def discard = Props(new DiscardingActor())
+    def forward = Props(new ForwardingActor())
+    def reply = Props(new EchoActor())
 
     case class AnotherFakeDevice() extends Device {
       type Address = String

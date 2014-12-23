@@ -31,4 +31,16 @@ class AkkaSpecs2Support extends TestKit(ActorSystem("test-system"))
     }
   }
 
+  class EchoActor() extends Actor {
+    def receive = {
+      case msg => sender ! msg
+    }
+  }
+
+  class DiscardingActor() extends Actor {
+    def receive = {
+      case msg => {}
+    }
+  }
+
 }

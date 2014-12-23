@@ -57,7 +57,7 @@ class ModbusDeviceActor(
 
   def receive = {
     case req@ModbusRequest(device, selection) =>
-      gateway ! Forward(device.address.gateway, req)
+      gateway forward Forward(device.address.gateway, req)
   }
 
 }
