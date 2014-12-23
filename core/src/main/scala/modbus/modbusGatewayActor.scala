@@ -4,7 +4,6 @@ package modbus
 
 import akka.actor.Actor
 import akka.actor.ActorLogging
-import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.OneForOneStrategy
 import akka.actor.Props
@@ -12,70 +11,8 @@ import akka.actor.SupervisorStrategy._
 import akka.routing.RoundRobinPool
 import akka.util.ByteString
 
-import org.joda.time.LocalDateTime
-import org.joda.time.DateTimeZone
-
-import capture.DeviceActorDirectory2
-import capture.Request2
-import capture.Response2
 import capture.GatewayActorDirectory
-
 import network.TCPGateway
-
-case class ModbusRequest(
-    device: ModbusDevice,
-    selection: ModbusRegisterRange) extends Request2 {
-  type D = ModbusDevice
-}
-
-case class ModbusResponse(
-    device: ModbusDevice,
-    measurement: ModbusMeasurement,
-    timestamp: LocalDateTime) extends Response2 {
-  type D = ModbusDevice
-}
-
-object ModbusResponse {
-  def apply(d: ModbusDevice, m: ModbusMeasurement): ModbusResponse = {
-    ModbusResponse(d, m, LocalDateTime.now(DateTimeZone.UTC))
-  }
-}
-
-
-/** An Actor representing a single ModbusDevice.
-  *
-  * It processes `ModbusRequest` tasks by forwarding the request to the
-  * appropriate gateway (through a `GatewayActorDirectory` service actor).
-  */
-class ModbusDeviceActor(
-    device: ModbusDevice) extends Actor
-                             with ActorLogging {
-
-  import GatewayActorDirectory.Protocol.Forward
-
-  private lazy val gateway = context.actorSelection(s"/user/${GatewayActorDirectory.name}")
-
-  def receive = {
-    case req@ModbusRequest(device, selection) =>
-      gateway forward Forward(device.address.gateway, req)
-  }
-
-}
-
-object ModbusDeviceActor {
-
-  import DeviceActorDirectory2.Protocol.Register
-
-  def registerWithDirectory(system: ActorSystem): Unit = {
-    val directory = system.actorSelection(s"/user/${DeviceActorDirectory2.name}")
-    directory ! Register {
-      case (d: ModbusDevice) => props(d)
-    }
-  }
-
-  def props(d: ModbusDevice) = Props(new ModbusDeviceActor(d))
-
-}
 
 object ModbusGatewayActor {
 

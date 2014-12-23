@@ -1,13 +1,13 @@
 package uk.co.sprily.dh
 package harvester
-package capture
+package actors
 
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.actor.Props
 
-/** Manage a set of (homogenously typed) Actors under a common parent.
+/** Manage a set of Actors under a common parent.
   *
   * Given a lookup key, `Key`, an existing `ActorRef` can be obtained, or
   * if it doesn't already exist, it will be created.  The `ActorRef` is then

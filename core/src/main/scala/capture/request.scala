@@ -6,8 +6,11 @@ import network.Device
 import scheduling.Schedule
 import scheduling.TargetLike
 
-case class Request[D <: Device](
-    val id: Long,
-    val schedule: Schedule,
-    val device: D,
-    val selection: D#AddressSelection)
+trait Request {
+  type D <: Device
+  type Selection = D#AddressSelection
+
+  val device: D
+  val selection: Selection
+}
+

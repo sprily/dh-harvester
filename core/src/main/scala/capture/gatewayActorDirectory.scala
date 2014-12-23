@@ -7,6 +7,7 @@ import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.actor.Props
 
+import actors.ActorDirectory
 import network.TCPGateway
 
 class GatewayActorDirectory extends ActorDirectory {
