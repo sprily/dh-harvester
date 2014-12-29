@@ -62,6 +62,7 @@ class TestContext extends AkkaSpecs2Support {
 
   lazy val basetime = Instant.now()
   lazy val dt = LocalDateTime.now()
+  lazy val fakeBus = new FakeResponseBus()
 
   case class FakeDevice(id: DeviceId) extends Device {
     type Address = String
@@ -86,13 +87,6 @@ class TestContext extends AkkaSpecs2Support {
   def schedule = Schedule.single(3.seconds)
   def request = FakeRequest(1, fakeDevice)
   def fakeResponse(m: String) = FakeResponse(m, fakeDevice)
-
-  lazy val fakeBus = new ResponseBus {
-    var responses = List[Response]()
-    def publish(r: Response) = { responses = r :: responses }
-    def subscribe(subscriber: ActorRef): Boolean = ???
-    def unsubscribe(subscriber: ActorRef): Boolean = ???
-  }
 
   def requestActor = TestActorRef(new RequestActor(request, schedule, fakeBus))
 
