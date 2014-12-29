@@ -20,7 +20,7 @@ class DeviceActorDirectorySpec extends SpecificationLike
 
   "A DeviceActorDirectory" should {
 
-    import DeviceActorDirectory2.Protocol._
+    import DeviceActorDirectory.Protocol._
 
     "accept new registrations" in new DeviceActorTestContext {
 
@@ -52,7 +52,7 @@ class DeviceActorDirectorySpec extends SpecificationLike
 
   class DeviceActorTestContext extends AkkaSpecs2Support with ImplicitSender {
 
-    def deviceActor = TestActorRef(new DeviceActorDirectory2())
+    def deviceActor = TestActorRef(new DeviceActorDirectory())
 
     case class FakeDevice(id: DeviceId) extends Device {
       type Address = String
