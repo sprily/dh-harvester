@@ -16,10 +16,11 @@ import akka.actor.Terminated
 
 import modbus.ModbusDevice
 import network.Device
+import scheduling.Schedule
 
 /** Manages the set of active RequestActors **/
 class RequestActorManager(bus: ResponseBus) extends Actor
-                                             with ActorLogging {
+                                               with ActorLogging {
 
   import RequestActorManager.Child
   import RequestActorManager.Protocol._
@@ -29,12 +30,12 @@ class RequestActorManager(bus: ResponseBus) extends Actor
   var requests = Map[Long, Child]()
 
   def receive = {
-    case (r: Request)             => ensureRequest(r)
+    case (r: Request)             => ensureRequest(ScheduledRequest(r, once))
     case (rs: PersistentRequests) => ensurePersistentRequests(rs)
     case Terminated(a)            => handleChildTerminated(a)
   }
 
-  def ensureRequest(r: Request) = {
+  def ensureRequest(r: ScheduledRequest) = {
     log.info(s"Ensuring request $r")
     requests.get(r.id) match {
       case None                        => spawnChild(r)
@@ -52,13 +53,13 @@ class RequestActorManager(bus: ResponseBus) extends Actor
     rs.requests foreach ensureRequest
   }
 
-  final private def spawnChild(r: Request) = {
-    val ref = context.actorOf(RequestActor.props(r, ???, bus), r.id.toString)
-    requests = requests + (r.id -> Child(r, ref))
+  final private def spawnChild(r: ScheduledRequest) = {
+    val ref = context.actorOf(RequestActor.props(r.request, r.schedule, bus))
+    requests = requests + (r.id -> Child(r.request, ref))
     context.watch(ref)
   }
 
-  final private def replaceChild(r: Request) = {
+  final private def replaceChild(r: ScheduledRequest) = {
     requests.get(r.id).foreach { _.ref ! PoisonPill.getInstance }
     spawnChild(r)
   }
@@ -72,9 +73,11 @@ class RequestActorManager(bus: ResponseBus) extends Actor
   }
 
   final private def handleChildTerminated(a: ActorRef) = {
-    log.info(s"Child RequestActot terminated $a")
+    log.info(s"Child RequestActor terminated $a")
     requests = requests.filter { case (_, Child(_, ref)) => a != ref }
   }
+
+  final private def once = Schedule.single(60.seconds)
 
 }
 
@@ -83,6 +86,11 @@ object RequestActorManager {
   protected case class Child(r: Request, ref: ActorRef)
 
   object Protocol {
-    case class PersistentRequests(requests: Seq[Request])
+
+    case class ScheduledRequest(request: Request, schedule: Schedule) {
+      def id = request.id
+    }
+
+    case class PersistentRequests(requests: Seq[ScheduledRequest])
   }
 }
