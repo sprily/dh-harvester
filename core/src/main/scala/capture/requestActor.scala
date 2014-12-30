@@ -39,7 +39,7 @@ class RequestActor(
   }
 
   protected def pollNowRcvd() = {
-    log.debug(s"Polling device $device")
+    log.info(s"Polling device $device")
     context.setReceiveTimeout(target.timeoutDelay())
     deviceActor ! DeviceProtocol.Forward(device, request)
   }
@@ -60,7 +60,7 @@ class RequestActor(
   }
 
   protected def responseRcvd(r: Response) = {
-    log.debug(s"Received response from device at ${r.timestamp}")
+    log.info(s"Received response from device at ${r.timestamp}")
     context.setReceiveTimeout(Duration.Undefined)
     bus.publish(r)
     schedule.completed(target) match {
