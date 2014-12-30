@@ -22,7 +22,7 @@ object ScheduleSpec extends Specification with ScalaCheck
     "generate meaningful Targets" in {
       implicit val FDs = Arbitrary(FDGen.choose(0.seconds, 60.seconds))
       implicit val schedules = Arbitrary(Gen.sized(ScheduleGen.all(_)))
-      meaningfulTargetProperty.set(minTestsOk=10000)
+      meaningfulTargetProperty.set(minTestsOk=1000)
     }
   }
 

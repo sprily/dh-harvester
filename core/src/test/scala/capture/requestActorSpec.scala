@@ -9,6 +9,7 @@ import scala.concurrent.duration._
 import akka.actor.ActorContext
 import akka.actor.ActorRef
 import akka.actor.ActorSelection
+import akka.actor.Props
 import akka.testkit.TestActorRef
 import akka.testkit.TestKit
 
@@ -29,93 +30,70 @@ class RequestActorSpec extends SpecificationLike
 
   "A RequestActor" should {
 
-    "Poll the device when started" in new RequestActorContext {
+    "Poll the device when started" in new TestContext {
+      setupFakeDeviceActor()
       val underTest = requestActor
-      expectMsgType[Poll] must === (pollMsg)
+
+      expectMsgType[Request] must === (request)
     }
 
-    "Send results to the results bus" in new RequestActorContext {
-      val measurement: fakeDevice.Measurement = List((1,100), (2,200))
+    "Send results to the results bus" in new TestContext {
+      setupFakeDeviceActor()
+      val measurement = "measurement"
       val underTest = requestActor
-      underTest ! deviceDirectory.Protocol.Result(dt, measurement)
+      val response = fakeResponse(measurement)
+      underTest ! response
 
-      val expected = List(Reading[fakeDevice.type](
-        dt, fakeDevice, measurement))
-      
-      fakeDeviceBus.readings must === (expected)
+      fakeBus.responses must === (List(response))
     }
 
-    "Throw an exception when a timeout is hit" in new RequestActorContext {
+    "Throw an exception when a timeout is hit" in new TestContext {
       (pending)
     }
 
-    "Stop if the Schedule completes" in new RequestActorContext {
+    "Stop if the Schedule completes" in new TestContext {
       (pending)
     }
   }
 
 }
 
-class RequestActorContext extends AkkaSpecs2Support {
-
-  case class TestTarget() extends TargetLike {
-    val initiateAt = basetime
-    val timeoutAt = basetime + 1.second
-  }
-
-  // for brevity
-  type TestDevice = fakeDevice.type
-  type Poll = deviceDirectory.Protocol.Poll
+class TestContext extends AkkaSpecs2Support {
 
   lazy val basetime = Instant.now()
   lazy val dt = LocalDateTime.now()
+  lazy val fakeBus = new FakeResponseBus()
 
-  lazy val fakeDevice = new Device {
-    trait Address
-    trait AddressSelection
-    type Measurement = List[(Int,Int)]
+  case class FakeDevice(id: DeviceId) extends Device {
+    type Address = String
+    type AddressSelection = String
+    type Measurement = String
 
-    val id = DeviceId(1L)
-    val address = new Address {}
-    val selection = new AddressSelection {}
+    val address = "address"
   }
 
-  def request(t: TestTarget) = Request[TestDevice](
-    id = 1L,
-    schedule = Schedule.single(3.seconds),
-    device = fakeDevice,
-    selection = fakeDevice.selection)
+  case class FakeRequest(id: Long, device: FakeDevice) extends Request {
+    type D = FakeDevice
+    val selection = "selection"
+  }
 
-  lazy val deviceDirectory = new DeviceActorDirectory[TestDevice] {
-    def lookup(device: TestDevice) = {
-      system.actorSelection(testActor.path)
+  case class FakeResponse(m: String, device: FakeDevice) extends Response {
+    type D = FakeDevice
+    val measurement = m
+    val timestamp = dt
+  }
+
+  def fakeDevice = FakeDevice(DeviceId(100))
+  def schedule = Schedule.single(3.seconds)
+  def request = FakeRequest(1, fakeDevice)
+  def fakeResponse(m: String) = FakeResponse(m, fakeDevice)
+
+  def requestActor = TestActorRef(new RequestActor(request, schedule, fakeBus))
+
+  def setupFakeDeviceActor(): Unit = {
+    val directory = system.actorOf(DeviceActorDirectory.props, DeviceActorDirectory.name)
+    directory ! DeviceActorDirectory.Protocol.Register {
+      case _ => Props(new ForwardingActor())
     }
   }
-
-  lazy val pollMsg = deviceDirectory.Protocol.Poll(
-    fakeDevice,
-    fakeDevice.selection
-  )
-
-  lazy val fakeDeviceBus = new DeviceBus {
-
-    var readings = List[Reading[Device]]()
-
-    def publish[D <: Device](r: Reading[D]) = {
-      readings = r.asInstanceOf[Reading[Device]] :: readings
-    }
-
-    def subscribe[D <: Device](subscriber: ActorRef, device: D): Boolean = ???
-    def unsubscribe[D <: Device](subscriber: ActorRef, from: D): Boolean = ???
-    def unsubscribe(subscriber: ActorRef): Unit = ???
-  }
-
-  def requestActor = TestActorRef(
-    new RequestActor[fakeDevice.type](
-      request(TestTarget()),
-      deviceDirectory,
-      fakeDeviceBus
-    )
-  )
-
 }

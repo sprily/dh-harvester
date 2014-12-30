@@ -1,17 +1,16 @@
 package uk.co.sprily.dh
 package harvester
 
-import network.Device
-
 import akka.actor.ActorRef
 import akka.event.EventBus
 import akka.event.LookupClassification
 
-trait DeviceBus {
-  def publish[D <: Device](reading: Reading[D]): Unit
-  def subscribe[D <: Device](subscriber: ActorRef, device: D): Boolean
-  def unsubscribe[D <: Device](subscriber: ActorRef, from: D): Boolean
-  def unsubscribe(subscriber: ActorRef): Unit
+import capture.Response
+
+trait ResponseBus {
+  def publish(response: Response): Unit
+  def subscribe(subscriber: ActorRef): Boolean
+  def unsubscribe(subscriber: ActorRef): Boolean
 }
 
 /** Implementation based on Akka's EventBus.
@@ -21,31 +20,29 @@ trait DeviceBus {
   * safely up-cast.  And on the way out, we're dealing with
   * actors anyway (ie AnyRef => Unit).
   */
-class AkkaDeviceBus extends DeviceBus {
+class AkkaResponseBus extends ResponseBus {
 
-  def publish[D <: Device](reading: Reading[D]): Unit = {
-    underlying.publish(reading.asInstanceOf[Reading[Device]])
+  case object CatchAll
+
+  def publish(response: Response): Unit = {
+    underlying.publish(response)
   }
 
-  def subscribe[D <: Device](subscriber: ActorRef, device: D) = {
-    underlying.subscribe(subscriber, device)
-  }
-
-  def unsubscribe[D <: Device](subscriber: ActorRef, from: D) = {
-    underlying.unsubscribe(subscriber, from)
+  def subscribe(subscriber: ActorRef) = {
+    underlying.subscribe(subscriber, CatchAll)
   }
 
   def unsubscribe(subscriber: ActorRef) = {
-    underlying.unsubscribe(subscriber)
+    underlying.unsubscribe(subscriber, CatchAll)
   }
 
   val underlying = new EventBus with LookupClassification {
-    type Event = Reading[Device]
-    type Classifier = Device
+    type Event = Response
+    type Classifier = CatchAll.type
     type Subscriber = ActorRef
      
     // is used for extracting the classifier from the incoming events
-    override protected def classify(event: Event): Classifier = event.device
+    override protected def classify(event: Event): Classifier = CatchAll
      
     // will be invoked for each event for all subscribers which registered themselves
     // for the event’s classifier
@@ -61,6 +58,6 @@ class AkkaDeviceBus extends DeviceBus {
      
     // determines the initial size of the index data structure
     // used internally (i.e. the expected number of different classifiers)
-    override protected def mapSize: Int = 16
+    override protected def mapSize: Int = 1
   }
 }
