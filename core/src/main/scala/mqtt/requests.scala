@@ -14,13 +14,8 @@ import uk.co.sprily.mqtt.Cont
 import uk.co.sprily.mqtt.ClientModule
 import uk.co.sprily.mqtt.TopicPattern
 
-import api.DeviceDTO
 import api.JsonFormats
-import api.Management
-import api.ModbusDeviceDTO
-import api.ModbusRequestDTO
-
-import capture.DeviceManagerActor
+import api.ManagedInstance
 
 import modbus.ModbusDevice
 
@@ -29,8 +24,6 @@ class Requests(
     persReqTopic: TopicPattern,
     client: ClientModule[Cont]#Client)
   extends Actor with ActorLogging {
-
-  import DeviceManagerActor.Protocol._
 
   // akka hooks.
   // perform broker subscription upon *first* initialisation only
@@ -43,30 +36,17 @@ class Requests(
 
     client.data(persReqTopic) { msg =>
       import JsonFormats._
+      import uk.co.sprily.dh.harvester.capture.RequestActorManager
+      import RequestActorManager.Protocol._
+      import scala.concurrent.duration._
+      import scheduling.Schedule
       val json = new String(msg.payload.toArray, "UTF-8").parseJson.asJsObject
+      val once = Schedule.single(60.seconds)    // TODO
+      val config = json.tryConvertTo[ManagedInstance].toOption.get    // TODO
+      val reqs = config.devices.flatMap(_.requests)
+                               .map(ScheduledRequest(_, once))
 
-      val mgmtRequest = json.tryConvertTo[Management].get
-      //val reqs = PersistentRequests(
-      
-      val reqs = for {
-        pReq <- mgmtRequest.requests
-        req <- pReq.dRequests
-      } yield req
-
-      val pReq = PersistentRequests(reqs)
-
-      //val reqs = mgmtRequest.requests.head.requestsDTO.map {
-      //  case (r: ModbusRequestDTO) => ModbusRequest(r.request(mgmtRequest.requests.head.device.asInstanceOf[ModbusDevice]))
-      //}
-
-
-      //val device = JsonFormats.convertToDevice(json).get
-      //device match {
-      //  case (d: ModbusDeviceDTO) => "some"
-      //  case _                       => "other"
-      //}
-      log.info(s"RCVD: $reqs")
-      context.actorSelection("../device-manager") ! pReq
+      context.actorSelection("../device-manager") ! PersistentRequests(reqs)
     }
 
   }

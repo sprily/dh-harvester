@@ -2,7 +2,8 @@ package uk.co.sprily.dh
 package harvester
 package api
 
-import scala.reflect.runtime.universe._
+import scala.util.Try
+import scala.util.Success
 
 import spray.json._
 
@@ -13,53 +14,43 @@ import network.Device
 
 object JsonFormats extends DefaultJsonProtocol {
 
-  def convertToDevice(json: JsObject): Option[DeviceDTO[_]] = {
-    json.fields.get("type").flatMap {
-      case JsString("modbus") => json.tryConvertTo[ModbusDeviceDTO]
-      case _                  => None
-    }
-  }
+  implicit val tcpGateway = jsonFormat2(TCPGatewayDTO)
+  implicit private val modbusRequestDTO = jsonFormat2(ModbusRequestDTO)
+  private val managedModbusDevice = jsonFormat4(ManagedModbusDevice)
 
-  def convertToPReq(json: JsObject): Option[PersistentRequestDTO[_]] = {
-    val deviceDTO = json.fields.get("device").flatMap(js => convertToDevice(js.asJsObject))
-    deviceDTO.flatMap {
-      case d@ModbusDeviceDTO(_,_,_) => 
-        json.fields.get("requests")
-          .flatMap(_.tryConvertTo[Seq[ModbusRequestDTO]])
-          .map(PersistentRequestDTO(d, _))
-        
-    }
-  }
+  implicit val managedDeviceDTO: RootJsonFormat[ManagedDevice] = {
+    new RootJsonFormat[ManagedDevice] {
 
-  implicit def PRequest: RootJsonFormat[PersistentRequestDTO[_]] = {
-    new RootJsonFormat[PersistentRequestDTO[_]] {
-      def read(json: JsValue): PersistentRequestDTO[_] = {
-        val deviceDTO = json.asJsObject.fields.get("device").flatMap(js => convertToDevice(js.asJsObject))
-        deviceDTO.flatMap {
-          case d@ModbusDeviceDTO(_,_,_) =>
-            json.asJsObject.fields.get("requests")
-              .flatMap(_.tryConvertTo[Seq[ModbusRequestDTO]])
-              .map(PersistentRequestDTO(d, _))
-        }.get   // throw DeserializationError
+      def read(js: JsValue): ManagedDevice = {
+        js.asJsObject.fields.get("type").map {
+          case JsString("modbus") => managedModbusDevice.read(js)
+          case JsString(other)    => readError(s"Unable to match device type: $other")
+          case _                  => readError("String 'type' field required")
+        } getOrElse(readError("'type' field missing"))
       }
 
-      def write(r: PersistentRequestDTO[_]): JsValue = {
-        r.deviceDTO match {
-          case d@ModbusDeviceDTO(_,_,_) => d.toJson
+      def write(device: ManagedDevice): JsValue = {
+        device match {
+          case (d: ManagedModbusDevice) => managedModbusDevice.withTypeName("modbus").write(d)
+          case _                        => writeError(s"Unable to write device $device")
         }
       }
     }
   }
 
-  implicit val mgmt = jsonFormat1(Management)
-  implicit val tcpGateway = jsonFormat2(TCPGatewayDTO)
-  implicit val modbusDevice = jsonFormat3(ModbusDeviceDTO).withTypeName
-  implicit val modbusRequest = jsonFormat3(ModbusRequestDTO)
+  implicit val managedInstance = jsonFormat1(ManagedInstance)
+
+  private def readError(msg: String) = {
+    throw new DeserializationException(msg)
+  }
+
+  private def writeError(msg: String) = {
+    throw new SerializationException(msg)
+  }
 
   implicit class JsValueOps(json: JsValue) {
-    def tryConvertTo[T: JsonReader]: Option[T] = {
-      try { Some(jsonReader[T].read(json)) }
-      catch { case (e: SerializationException) => None }
+    def tryConvertTo[T: JsonReader]: Try[T] = {
+      Try { jsonReader[T].read(json) }
     }
   }
 
@@ -67,33 +58,21 @@ object JsonFormats extends DefaultJsonProtocol {
     def update(k: String, v: JsValue) = json.copy(json.fields + (k -> v))
   }
 
-  implicit class RootJsonFormatOps[T : NamedType](fmt: RootJsonFormat[T]) {
+  implicit class RootJsonFormatOps[T](fmt: RootJsonFormat[T]) {
 
-    private val name = implicitly[NamedType[T]].typeName
-
-    def withTypeName: RootJsonFormat[T] = new RootJsonFormat[T] {
+    def withTypeName(name: String): RootJsonFormat[T] = new RootJsonFormat[T] {
       def read(json: JsValue): T = {
-        json.asJsObject.fields("type") match {
-          case JsString(name) => fmt.read(json)
-        }
+        json.asJsObject.fields.get("type").map {
+          case JsString(n) if n == name => fmt.read(json)
+          case JsString(other)          => readError(s"Unable to match device type: $other")
+          case _                        => readError("String 'type' field required")
+        } getOrElse(readError("'type' field missing"))
       }
+
       def write(t: T): JsValue = {
         fmt.write(t).asJsObject.update("type", JsString(name))
       }
     }
-
-  }
-
-  trait NamedType[T] {
-    def typeName: String
-  }
-
-  object NamedType {
-    def apply[T](name: String): NamedType[T] = new NamedType[T] {
-      def typeName = name
-    }
-
-    implicit def modbusDevice: NamedType[ModbusDeviceDTO] = NamedType[ModbusDeviceDTO]("modbus")
 
   }
 

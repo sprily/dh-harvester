@@ -4,50 +4,68 @@ package api
 
 import scala.concurrent.duration._
 
-import capture.DeviceManagerActor
 import capture.Request
 import modbus.ModbusDevice
 import modbus.ModbusDeviceAddress
 import modbus.ModbusRegisterRange
+import modbus.ModbusRequest
 import network.Device
+import network.DeviceId
+import network.IP4Address
+import network.TCPGateway
 import scheduling.Schedule
 
-case class Management(requests: Seq[PersistentRequestDTO[_]])
+case class ManagedInstance(devices: Seq[ManagedDevice])
 
-case class PersistentRequestDTO[D <: Device](
-    deviceDTO: DeviceDTO[D],
-    requestsDTO: Seq[RequestDTO[D]]) {
+// QUESTION: can we turn this into a type-class?
 
-  import DeviceManagerActor.Protocol._
+trait ManagedDevice {
 
-  def device: D = deviceDTO.device
-  def requests: Seq[Request[D]] = {
-    requestsDTO.map(_.request(device))
-  }
+  // The type of Request this DTO can generate
+  type R <: Request
 
-  def dRequests: Seq[DeviceRequest] = requestsDTO.map {
-    case (r: ModbusRequestDTO) => ModbusRequest(r.request(device.asInstanceOf[ModbusDevice]))
-  }
+  // How that Request's DTO is modelled
+  protected type RequestDTO
 
+  // Given a RequestDTO instance, return the Request
+  protected def toRequest(rDTO: RequestDTO): R
+  protected val requestDTOs: Seq[RequestDTO]
+
+  def device: R#D
+  def requests: Seq[R] = requestDTOs.map(toRequest(_))
 }
 
-sealed trait RequestDTO[D <: Device] {
-  val id: Long
-  val interval: Long
-
-  def request: D => Request[D]
-}
-
-case class ModbusRequestDTO(
+case class ManagedModbusDevice(
     id: Long,
-    interval: Long,
-    registers: (Int, Int)) extends RequestDTO[ModbusDevice] {
+    unitId: Int,
+    gateway: TCPGatewayDTO,
+    requestDTOs: Seq[ModbusRequestDTO]) extends ManagedDevice {
 
-  def request = Request[ModbusDevice](
-    id,
-    Schedule.each(interval.millis),
-    _: ModbusDevice,
-    ModbusRegisterRange(registers._1, registers._2)
+  type R = ModbusRequest
+  type RequestDTO = ModbusRequestDTO
+
+  override def toRequest(r: RequestDTO) = ModbusRequest(
+    id = id,
+    device = device,
+    selection = ModbusRegisterRange(r.range._1, r.range._2))
+
+  def device = ModbusDevice(
+    DeviceId(id),
+    ModbusDeviceAddress(
+      unitId.toByte,  // TODO
+      gateway.gateway)
   )
+
+}
+
+case class ModbusRequestDTO(id: Long, range: (Int, Int))
+
+case class TCPGatewayDTO(
+    host: String,
+    port: Int) {
+
+  def gateway = TCPGateway(
+    IP4Address.fromString(host).get,
+    port)
 
 }
