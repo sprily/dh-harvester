@@ -17,8 +17,6 @@ import scheduling.Schedule
 
 case class ManagedInstance(devices: Seq[ManagedDevice])
 
-// QUESTION: can we turn this into a type-class?
-
 trait ManagedDevice {
 
   // The type of Request this DTO can generate
@@ -29,10 +27,13 @@ trait ManagedDevice {
 
   // Given a RequestDTO instance, return the Request
   protected def toRequest(rDTO: RequestDTO): R
-  protected val requestDTOs: Seq[RequestDTO]
+  protected def toSchedule(rDTO: RequestDTO): Schedule
+  protected def requestDTOs: Seq[RequestDTO]
+  private def requests: Seq[R] = requestDTOs.map(toRequest(_))
+  private def schedules: Seq[Schedule] = requestDTOs.map(toSchedule(_))
 
   def device: R#D
-  def requests: Seq[R] = requestDTOs.map(toRequest(_))
+  def scheduledRequests: Seq[(R,Schedule)] = requests.zip(schedules)
 }
 
 case class ManagedModbusDevice(
@@ -49,6 +50,10 @@ case class ManagedModbusDevice(
     device = device,
     selection = ModbusRegisterRange(r.range._1, r.range._2))
 
+  override def toSchedule(r: RequestDTO) = {
+    Schedule.each(r.interval.seconds).fixTimeoutTo(10.seconds)
+  }
+
   def device = ModbusDevice(
     DeviceId(id),
     ModbusDeviceAddress(
@@ -58,7 +63,7 @@ case class ManagedModbusDevice(
 
 }
 
-case class ModbusRequestDTO(id: Long, range: (Int, Int))
+case class ModbusRequestDTO(id: Long, range: (Int, Int), interval: Int)
 
 case class TCPGatewayDTO(
     host: String,

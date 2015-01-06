@@ -41,10 +41,9 @@ class Requests(
       import scala.concurrent.duration._
       import scheduling.Schedule
       val json = new String(msg.payload.toArray, "UTF-8").parseJson.asJsObject
-      val once = Schedule.single(60.seconds)    // TODO
       val config = json.tryConvertTo[ManagedInstance].toOption.get    // TODO
-      val reqs = config.devices.flatMap(_.requests)
-                               .map(ScheduledRequest(_, once))
+      val reqs = config.devices.flatMap(_.scheduledRequests)
+                               .map(ScheduledRequest.tupled)
 
       context.actorSelection("../device-manager") ! PersistentRequests(reqs)
     }

@@ -15,7 +15,7 @@ import network.Device
 object JsonFormats extends DefaultJsonProtocol {
 
   implicit val tcpGateway = jsonFormat2(TCPGatewayDTO)
-  implicit private val modbusRequestDTO = jsonFormat2(ModbusRequestDTO)
+  implicit private val modbusRequestDTO = jsonFormat3(ModbusRequestDTO)
   private val managedModbusDevice = jsonFormat4(ManagedModbusDevice)
 
   implicit val managedDeviceDTO: RootJsonFormat[ManagedDevice] = {
