@@ -64,11 +64,8 @@ object Main extends App {
   import RequestActorManager.Protocol.PersistentRequests
   import RequestActorManager.Protocol.ScheduledRequest
 
-  val request = ModbusRequest(999, device, ModbusRegisterRange(50520, 50524))
-  val schedule = Schedule.each(1.seconds).fixTimeoutTo(3.seconds)
   val bus = new AkkaResponseBus()
   val client = Await.result(AsyncSimpleClient.connect(MqttOptions.cleanSession()), 3.seconds)
-  val reqs = system.actorOf(mqtt.Requests.props(client), "mqtt-requests-rcvr")
 
   val manager = system.actorOf(Props(
     new RequestActorManager(bus)),
@@ -77,14 +74,7 @@ object Main extends App {
   val publisher = system.actorOf(Props(
     new ResultsPublisher( Topic("test-org"), bus, client)), "mqtt-publisher")
 
-  val persistentRequests = PersistentRequests(List(
-    ScheduledRequest(request, schedule)))
-  manager ! persistentRequests
-
-  //(1 to 10).foreach { i =>
-  //  sender
-  //  Thread.sleep(1000)
-  //}
+  val apiActor = system.actorOf(mqtt.Requests.props(client), "api-actor")
 
   println("Press enter to stop")
   readLine()

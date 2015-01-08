@@ -45,7 +45,7 @@ class Requests(
       val reqs = config.devices.flatMap(_.scheduledRequests)
                                .map(ScheduledRequest.tupled)
 
-      context.actorSelection("../device-manager") ! PersistentRequests(reqs)
+      context.actorSelection("../request-manager") ! PersistentRequests(reqs)
     }
 
   }

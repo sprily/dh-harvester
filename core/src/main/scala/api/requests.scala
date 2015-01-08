@@ -46,7 +46,7 @@ case class ManagedModbusDevice(
   type RequestDTO = ModbusRequestDTO
 
   override def toRequest(r: RequestDTO) = ModbusRequest(
-    id = id,
+    id = r.id,
     device = device,
     selection = ModbusRegisterRange(r.range._1, r.range._2))
 
