@@ -74,7 +74,7 @@ object Main extends App {
   val publisher = system.actorOf(Props(
     new ResultsPublisher( Topic("test-org"), bus, client)), "mqtt-publisher")
 
-  val apiActor = system.actorOf(mqtt.Requests.props(client), "api-actor")
+  val apiActor = system.actorOf(mqtt.Requests.props(Topic("test-org"), client), "api-actor")
 
   println("Press enter to stop")
   readLine()

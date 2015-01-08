@@ -13,6 +13,7 @@ import spray.json._
 import uk.co.sprily.mqtt.Cont
 import uk.co.sprily.mqtt.ClientModule
 import uk.co.sprily.mqtt.TopicPattern
+import uk.co.sprily.mqtt.Topic
 
 import api.JsonFormats
 import api.ManagedInstance
@@ -57,10 +58,18 @@ class Requests(
 }
 
 object Requests {
-  def props(client: ClientModule[Cont]#Client) = Props(
-    new Requests(reqPattern, pReqPattern, client)
+
+  def props(root: Topic, client: ClientModule[Cont]#Client) = Props(
+    new Requests(reqPattern(root), pReqPattern(root), client)
   )
 
-  def reqPattern = TopicPattern("test-org/todo")
-  def pReqPattern = TopicPattern("test-org/todo/too")
+
+  private implicit class TopicPatternOps(t: TopicPattern) {
+    def ::(other: Topic): TopicPattern = {
+      TopicPattern((other.path.split("/").toList ++ t.path.split("/").toList).mkString("/"))
+    }
+  }
+
+  private def reqPattern(root: Topic) = root :: TopicPattern("manage/requests/adhoc")
+  private def pReqPattern(root: Topic) = root :: TopicPattern("manage/requests/persistent")
 }
