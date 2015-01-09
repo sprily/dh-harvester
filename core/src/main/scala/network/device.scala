@@ -4,7 +4,7 @@ package network
 
 case class DeviceId(v: Long) extends AnyVal
 
-trait Device { self =>
+trait DeviceLike { self =>
 
   /**
     * Each device type has its own way of addressing registers or sensors.

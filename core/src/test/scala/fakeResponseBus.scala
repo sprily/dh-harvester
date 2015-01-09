@@ -3,11 +3,11 @@ package harvester
 
 import akka.actor.ActorRef
 
-import capture.Response
+import capture.ResponseLike
 
 class FakeResponseBus extends ResponseBus {
-  var responses = List[Response]()
-  def publish(r: Response) = { responses = r :: responses }
+  var responses = List[ResponseLike]()
+  def publish(r: ResponseLike) = { responses = r :: responses }
   def subscribe(subscriber: ActorRef): Boolean = ???
   def unsubscribe(subscriber: ActorRef): Boolean = ???
 }

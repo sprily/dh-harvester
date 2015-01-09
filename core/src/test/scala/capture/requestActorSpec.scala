@@ -18,7 +18,7 @@ import org.joda.time.LocalDateTime
 import org.specs2.mutable.SpecificationLike
 import org.specs2.time.NoTimeConversions
 
-import network.Device
+import network.DeviceLike
 import network.DeviceId
 
 import scheduling.Instant
@@ -34,7 +34,7 @@ class RequestActorSpec extends SpecificationLike
       setupFakeDeviceActor()
       val underTest = requestActor
 
-      expectMsgType[Request] must === (request)
+      expectMsgType[RequestLike] must === (request)
     }
 
     "Send results to the results bus" in new TestContext {
@@ -64,7 +64,7 @@ class TestContext extends AkkaSpecs2Support {
   lazy val dt = LocalDateTime.now()
   lazy val fakeBus = new FakeResponseBus()
 
-  case class FakeDevice(id: DeviceId) extends Device {
+  case class FakeDevice(id: DeviceId) extends DeviceLike {
     type Address = String
     type AddressSelection = String
     type Measurement = String
@@ -72,13 +72,13 @@ class TestContext extends AkkaSpecs2Support {
     val address = "address"
   }
 
-  case class FakeRequest(id: Long, device: FakeDevice) extends Request {
-    type D = FakeDevice
+  case class FakeRequest(id: Long, device: FakeDevice) extends RequestLike {
+    type Device = FakeDevice
     val selection = "selection"
   }
 
-  case class FakeResponse(m: String, device: FakeDevice) extends Response {
-    type D = FakeDevice
+  case class FakeResponse(m: String, device: FakeDevice) extends ResponseLike {
+    type Device = FakeDevice
     val measurement = m
     val timestamp = dt
   }

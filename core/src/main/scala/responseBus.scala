@@ -5,10 +5,10 @@ import akka.actor.ActorRef
 import akka.event.EventBus
 import akka.event.LookupClassification
 
-import capture.Response
+import capture.ResponseLike
 
 trait ResponseBus {
-  def publish(response: Response): Unit
+  def publish(response: ResponseLike): Unit
   def subscribe(subscriber: ActorRef): Boolean
   def unsubscribe(subscriber: ActorRef): Boolean
 }
@@ -24,7 +24,7 @@ class AkkaResponseBus extends ResponseBus {
 
   case object CatchAll
 
-  def publish(response: Response): Unit = {
+  def publish(response: ResponseLike): Unit = {
     underlying.publish(response)
   }
 
@@ -37,7 +37,7 @@ class AkkaResponseBus extends ResponseBus {
   }
 
   val underlying = new EventBus with LookupClassification {
-    type Event = Response
+    type Event = ResponseLike
     type Classifier = CatchAll.type
     type Subscriber = ActorRef
      

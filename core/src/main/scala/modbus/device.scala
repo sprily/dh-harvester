@@ -7,8 +7,8 @@ import akka.util.ByteString
 import scodec._
 import codecs._
 
-import harvester.network.Device
 import harvester.network.DeviceId
+import harvester.network.DeviceLike
 import harvester.network.TCPGateway
 
 import protocols.codecs
@@ -30,7 +30,7 @@ case class ModbusRegisterRange(
 
 case class ModbusDevice(
     val id: DeviceId,
-    val address: ModbusDeviceAddress) extends Device {
+    val address: ModbusDeviceAddress) extends DeviceLike {
 
   type Address = ModbusDeviceAddress
   type AddressSelection = ModbusRegisterRange

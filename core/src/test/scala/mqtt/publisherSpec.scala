@@ -23,7 +23,7 @@ import uk.co.sprily.mqtt.QoS
 import uk.co.sprily.mqtt.Topic
 import uk.co.sprily.mqtt.TopicPattern
 
-import capture.Response
+import capture.ResponseLike
 
 import modbus.ModbusDevice
 import modbus.ModbusDeviceAddress
@@ -31,7 +31,7 @@ import modbus.ModbusMeasurement
 import modbus.ModbusRegisterRange
 import modbus.ModbusResponse
 
-import network.Device
+import network.DeviceLike
 import network.DeviceId
 import network.IP4Address
 import network.TCPGateway
@@ -76,7 +76,7 @@ class ResultsPublisherSpec extends SpecificationLike
           port = 5432)))
 
     lazy val fakeBus = new ResponseBus {
-      def publish(r: Response) = noOp
+      def publish(r: ResponseLike) = noOp
       def subscribe(s: ActorRef) = true
       def unsubscribe(s: ActorRef) = true
 

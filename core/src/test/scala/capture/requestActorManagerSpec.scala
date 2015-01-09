@@ -35,7 +35,7 @@ class RequestActorManagerSpec extends SpecificationLike
       setupFakeDeviceActor()
       val underTest = manager
       underTest ! adhocRequest
-      expectMsgType[Request] must === (adhocRequest)
+      expectMsgType[RequestLike] must === (adhocRequest)
     }
 
     "Ignore ScheduledRequests to a given device" in new TestContext() {
@@ -50,8 +50,8 @@ class RequestActorManagerSpec extends SpecificationLike
       val underTest = manager
       underTest ! persistentRequests
 
-      val req1 = expectMsgType[Request]
-      val req2 = expectMsgType[Request]
+      val req1 = expectMsgType[RequestLike]
+      val req2 = expectMsgType[RequestLike]
       Set(req1, req2) must === (persistentRequests.requests.map(_.request).toSet)
     }
 
@@ -60,10 +60,10 @@ class RequestActorManagerSpec extends SpecificationLike
       val underTest = manager
 
       underTest ! adhocRequest
-      val req1 = expectMsgType[Request]
+      val req1 = expectMsgType[RequestLike]
 
       underTest ! adhocRequest
-      val req2 = expectMsgType[Request]
+      val req2 = expectMsgType[RequestLike]
 
       (req1 must === (adhocRequest)) and
       (req2 must === (adhocRequest))
@@ -82,13 +82,13 @@ class RequestActorManagerSpec extends SpecificationLike
       
       // send the initial request
       underTest ! persistentRequests
-      expectMsgType[Request]
-      expectMsgType[Request]
+      expectMsgType[RequestLike]
+      expectMsgType[RequestLike]
 
       // update the persistent request
       val newReqs = PersistentRequests(persistentRequests.requests.tail)
       underTest ! newReqs
-      expectMsgType[Request]
+      expectMsgType[RequestLike]
       expectNoMsg(300.millis)
     }
 
@@ -100,20 +100,20 @@ class RequestActorManagerSpec extends SpecificationLike
     lazy val fakeBus = new FakeResponseBus()
     lazy val fakeDevice = FakeDevice(DeviceId(100))
    
-    case class FakeDevice(id: DeviceId) extends Device {
+    case class FakeDevice(id: DeviceId) extends DeviceLike {
       type Address = String
       type AddressSelection = String
       type Measurement = String
       val address = "address"
     }
 
-    case class FakeRequest(id: Long, device: FakeDevice) extends Request {
-      type D = FakeDevice
+    case class FakeRequest(id: Long, device: FakeDevice) extends RequestLike {
+      type Device = FakeDevice
       val selection = "selection"
     }
 
-    case object FakeResponse extends Response {
-      type D = FakeDevice
+    case object FakeResponse extends ResponseLike {
+      type Device = FakeDevice
       val device = fakeDevice
       val measurement = "measurement"
       lazy val timestamp = dt

@@ -4,13 +4,13 @@ package capture
 
 import org.joda.time.LocalDateTime
 
-import network.Device
+import network.DeviceLike
 
-trait Response {
-  type D <: Device
-  type Measurement = D#Measurement
+trait ResponseLike {
+  type Device <: DeviceLike
+  type Measurement = Device#Measurement
 
   val timestamp: LocalDateTime
-  val device: D
+  val device: Device
   val measurement: Measurement
 }

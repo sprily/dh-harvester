@@ -5,13 +5,13 @@ package modbus
 import org.joda.time.LocalDateTime
 import org.joda.time.DateTimeZone
 
-import capture.Response
+import capture.ResponseLike
 
 case class ModbusResponse(
     device: ModbusDevice,
     measurement: ModbusMeasurement,
-    timestamp: LocalDateTime) extends Response {
-  type D = ModbusDevice
+    timestamp: LocalDateTime) extends ResponseLike {
+  type Device = ModbusDevice
 }
 
 object ModbusResponse {

@@ -5,7 +5,7 @@ package capture
 import akka.actor.Props
 
 import actors.ActorDirectory
-import network.Device
+import network.DeviceLike
 
 /** Directory of DeviceActors
   *
@@ -13,13 +13,13 @@ import network.Device
   * directory using `Forward`.
   */
 class DeviceActorDirectory extends ActorDirectory {
-  type Key = Device
+  type Key = DeviceLike
   val protocol = DeviceActorDirectory.Protocol
-  override def actorPath(d: Device) = d.id.v.toString
+  override def actorPath(d: DeviceLike) = d.id.v.toString
 }
 
 object DeviceActorDirectory {
-  object Protocol extends ActorDirectory.Protocol[Device]
+  object Protocol extends ActorDirectory.Protocol[DeviceLike]
   def name = "device-actor-directory"
   def props = Props(new DeviceActorDirectory())
 }

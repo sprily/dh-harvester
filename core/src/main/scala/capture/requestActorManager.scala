@@ -15,7 +15,7 @@ import akka.actor.SupervisorStrategy._
 import akka.actor.Terminated
 
 import modbus.ModbusDevice
-import network.Device
+import network.DeviceLike
 import scheduling.Schedule
 
 /** Manages the set of active RequestActors **/
@@ -30,7 +30,7 @@ class RequestActorManager(bus: ResponseBus) extends Actor
   var requests = Map[Long, Child]()
 
   def receive = {
-    case (r: Request)             => ensureRequest(ScheduledRequest(r, once))
+    case (r: RequestLike)         => ensureRequest(ScheduledRequest(r, once))
     case (rs: PersistentRequests) => ensurePersistentRequests(rs)
     case Terminated(a)            => handleChildTerminated(a)
   }
@@ -64,7 +64,7 @@ class RequestActorManager(bus: ResponseBus) extends Actor
     spawnChild(r)
   }
 
-  final private def stopRequest(r: Request) = {
+  final private def stopRequest(r: RequestLike) = {
     log.info(s"Stopping $r")
     requests.get(r.id).foreach { child =>
       child.ref ! PoisonPill.getInstance
@@ -83,11 +83,11 @@ class RequestActorManager(bus: ResponseBus) extends Actor
 
 object RequestActorManager {
 
-  protected case class Child(r: Request, ref: ActorRef)
+  protected case class Child(r: RequestLike, ref: ActorRef)
 
   object Protocol {
 
-    case class ScheduledRequest(request: Request, schedule: Schedule) {
+    case class ScheduledRequest(request: RequestLike, schedule: Schedule) {
       def id = request.id
     }
 

@@ -2,16 +2,16 @@ package uk.co.sprily.dh
 package harvester
 package capture
 
-import network.Device
+import network.DeviceLike
 import scheduling.Schedule
 import scheduling.TargetLike
 
-trait Request {
-  type D <: Device
-  type Selection = D#AddressSelection
+trait RequestLike {
+  type Device <: DeviceLike
+  type Selection = Device#AddressSelection
 
   val id: Long
-  val device: D
+  val device: Device
   val selection: Selection
 }
 

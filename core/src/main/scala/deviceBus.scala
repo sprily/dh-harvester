@@ -5,7 +5,7 @@ import akka.actor.ActorRef
 import akka.event.EventBus
 import akka.event.LookupClassification
 
-import network.Device
+import network.DeviceLike
 
 /** Transmits changes to the connected devices **/
 trait DeviceBus {
@@ -18,8 +18,8 @@ trait DeviceBus {
 object DeviceBus {
   object Protocol {
     sealed trait Event
-    case class DeviceAdded(device: Device) extends Event
-    case class DeviceRemoved(device: Device) extends Event
+    case class DeviceAdded(device: DeviceLike) extends Event
+    case class DeviceRemoved(device: DeviceLike) extends Event
   }
 }
 

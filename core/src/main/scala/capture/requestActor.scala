@@ -9,12 +9,12 @@ import akka.actor.ActorLogging
 import akka.actor.Props
 import akka.actor.ReceiveTimeout
 
-import network.Device
+import network.DeviceLike
 import scheduling.Schedule
 import scheduling.TargetLike
 
 class RequestActor(
-    val request: Request,
+    val request: RequestLike,
     val schedule: Schedule,
     val bus: ResponseBus) extends Actor with ActorLogging {
 
@@ -35,7 +35,7 @@ class RequestActor(
   def receive = {
     case PollNow        => pollNowRcvd()
     case ReceiveTimeout => timeoutRcvd()
-    case (r: Response)  => responseRcvd(r)
+    case (r: ResponseLike)  => responseRcvd(r)
   }
 
   protected def pollNowRcvd() = {
@@ -59,7 +59,7 @@ class RequestActor(
     throw new PollingTimedOutException()
   }
 
-  protected def responseRcvd(r: Response) = {
+  protected def responseRcvd(r: ResponseLike) = {
     log.info(s"Received response from device at ${r.timestamp}")
     context.setReceiveTimeout(Duration.Undefined)
     bus.publish(r)
@@ -81,7 +81,9 @@ class RequestActor(
 
 object RequestActor {
 
-  def props(request: Request, schedule: Schedule, bus: ResponseBus): Props = Props(
+  def props(request: RequestLike,
+            schedule: Schedule,
+            bus: ResponseBus): Props = Props(
     new RequestActor(request, schedule, bus)
   )
 

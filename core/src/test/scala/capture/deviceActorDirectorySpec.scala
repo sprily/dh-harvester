@@ -12,8 +12,8 @@ import akka.testkit.TestActorRef
 import org.specs2.mutable.SpecificationLike
 import org.specs2.time.NoTimeConversions
 
-import network.Device
 import network.DeviceId
+import network.DeviceLike
 
 class DeviceActorDirectorySpec extends SpecificationLike
                                   with NoTimeConversions {
@@ -54,7 +54,7 @@ class DeviceActorDirectorySpec extends SpecificationLike
 
     def deviceActor = TestActorRef(new DeviceActorDirectory())
 
-    case class FakeDevice(id: DeviceId) extends Device {
+    case class FakeDevice(id: DeviceId) extends DeviceLike {
       type Address = String
       type AddressSelection = Int
       type Measurement = List[Int]
@@ -65,7 +65,7 @@ class DeviceActorDirectorySpec extends SpecificationLike
     def forward = Props(new ForwardingActor())
     def reply = Props(new EchoActor())
 
-    case class AnotherFakeDevice() extends Device {
+    case class AnotherFakeDevice() extends DeviceLike {
       type Address = String
       type AddressSelection = String
       type Measurement = Nothing

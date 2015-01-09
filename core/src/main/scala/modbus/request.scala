@@ -2,13 +2,13 @@ package uk.co.sprily.dh
 package harvester
 package modbus
 
-import capture.Request
+import capture.RequestLike
 
 case class ModbusRequest(
     id: Long,
     device: ModbusDevice,
-    selection: ModbusRegisterRange) extends Request {
+    selection: ModbusRegisterRange) extends RequestLike {
 
-  type D = ModbusDevice
+  type Device = ModbusDevice
 
 }

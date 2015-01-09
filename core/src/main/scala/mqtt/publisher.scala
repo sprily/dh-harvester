@@ -15,8 +15,8 @@ import scodec.Codec
 import uk.co.sprily.mqtt.ClientModule
 import uk.co.sprily.mqtt.Topic
 
-import capture.Response
-import network.Device
+import capture.ResponseLike
+import network.DeviceLike
 import protocols.codecs
 import modbus.ModbusResponse
 
@@ -43,11 +43,11 @@ class ResultsPublisher[M[+_]](
     mqttClient.publish(topic, payload)
   }
 
-  private final def topicFor(r: Response) = {
+  private final def topicFor(r: ResponseLike) = {
     Topic(s"${topicRoot.path}/${r.device.id.v}/data/raw")
   }
 
-  private final def serialise(r: Response)(implicit codec: Codec[r.Measurement]) = {
+  private final def serialise(r: ResponseLike)(implicit codec: Codec[r.Measurement]) = {
     (for {
       tsBV <- codecs.localDateTime.encode(r.timestamp)
       mBV  <- codec.encode(r.measurement)
