@@ -22,7 +22,7 @@ import uk.co.sprily.mqtt.Topic
 import api.JsonFormats
 import api.JsonFormats._
 import api.ManagedDevice
-import api.ManagedInstance
+import api.ManagedRequests
 
 import capture.RequestActorManager.Protocol._
 
@@ -55,24 +55,26 @@ class Requests(
 
   override def receive = {
 
-    case p@Persistent(_) => p.extract[ManagedInstance] match {
-      case Success(config) => requestManager ! extractRequests(config)
-      case Failure(e)      => log.error(s"Error processing Persistent command: $e")
-    }
+    case _ => ()
 
-    case a@AdHoc(_) => a.extract[ManagedDevice] match {
-      case Success(req) => requestManager ! req
-      case Failure(e)   => log.error(s"Error processing AdHoc command: $e")
-    }
+    //case p@Persistent(_) => p.extract[ManagedInstance] match {
+    //  case Success(config) => requestManager ! extractRequests(config)
+    //  case Failure(e)      => log.error(s"Error processing Persistent command: $e")
+    //}
+
+    //case a@AdHoc(_) => a.extract[ManagedDevice] match {
+    //  case Success(req) => requestManager ! req
+    //  case Failure(e)   => log.error(s"Error processing AdHoc command: $e")
+    //}
 
   }
 
-  private def extractRequests(config: ManagedInstance) = {
-    PersistentRequests(
-      config.devices.flatMap(_.scheduledRequests)
-                    .map(ScheduledRequest.tupled)
-    )
-  }
+  //private def extractRequests(config: ManagedInstance) = {
+  //  PersistentRequests(
+  //    config.devices.flatMap(_.scheduledRequests)
+  //                  .map(ScheduledRequest.tupled)
+  //  )
+  //}
 
   private def requestManager = context.actorSelection("../request-manager")
 
