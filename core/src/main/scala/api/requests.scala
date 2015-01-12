@@ -35,7 +35,7 @@ case class ModbusDeviceRequests(
   type Request = ModbusRequest
 
   def deviceId = DeviceId(id)
-  def schedule = Schedule.single(interval.seconds)fixTimeoutTo(10.seconds)
+  def schedule = Schedule.each(interval.seconds)fixTimeoutTo(10.seconds)
   def requests(d: Request#Device) = requestDTOs.map(_.toRequest(d, schedule))
 }
 
