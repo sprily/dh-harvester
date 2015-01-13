@@ -20,6 +20,7 @@ import org.joda.time.LocalDateTime
 import org.specs2.mutable.SpecificationLike
 import org.specs2.time.NoTimeConversions
 
+import controllers._
 import modbus._
 import network._
 import scheduling._
@@ -130,12 +131,13 @@ class RequestActorManagerSpec extends SpecificationLike
     def managerProps = Props(new RequestActorManager(fakeBus))
 
     def setupFakeDeviceActor(): Unit = {
-      val directory = system.actorOf(DeviceActorDirectory.props, DeviceActorDirectory.name)
-      directory ! DeviceActorDirectory.Protocol.Register {
+      val manager = system.actorOf(DeviceManager.props, DeviceManager.name)
+      manager ! DeviceManager.Protocol.Register {
         case _ => Props(new ForwardingActor(
           respondWith = { case _ => Some(FakeResponse) }
         ))
       }
+      manager ! DeviceManager.Protocol.SetDevices(List(fakeDevice))
     }
 
   }

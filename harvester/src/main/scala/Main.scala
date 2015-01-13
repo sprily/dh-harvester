@@ -13,6 +13,7 @@ import akka.actor.Props
 
 import uk.co.sprily.mqtt._
 
+import controllers._
 import network._
 import modbus._
 import scheduling._
@@ -55,11 +56,13 @@ object Main extends App {
     GatewayActorDirectory.name)
 
   val devices = system.actorOf(
-    DeviceActorDirectory.props,
-    DeviceActorDirectory.name)
+    DeviceManager.props,
+    DeviceManager.name)
+
 
   ModbusGatewayActor.registerWithDirectory(system)
-  ModbusDeviceActor.registerWithDirectory(system)
+  ModbusDeviceActor.registerWithManager(system)
+  devices ! DeviceManager.Protocol.SetDevices(List(device))
 
   import RequestActorManager.Protocol.PersistentRequests
   import RequestActorManager.Protocol.ScheduledRequest
@@ -75,6 +78,14 @@ object Main extends App {
     new ResultsPublisher( Topic("test-org"), bus, client)), "mqtt-publisher")
 
   val apiActor = system.actorOf(mqtt.Requests.props(Topic("test-org"), client), "api-actor")
+
+  val request = ModbusRequest(
+    100L,
+    device,
+    ModbusRegisterRange(50520, 50524))
+
+  manager ! PersistentRequests(List(
+    ScheduledRequest(request, Schedule.each(3.seconds))))
 
   println("Press enter to stop")
   readLine()

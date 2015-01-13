@@ -55,7 +55,7 @@ class Requests(
 
   override def receive = {
 
-    case _ => ()
+    case _ =>
 
     //case p@Persistent(_) => p.extract[ManagedInstance] match {
     //  case Success(config) => requestManager ! extractRequests(config)

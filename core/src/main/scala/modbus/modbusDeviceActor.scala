@@ -11,8 +11,8 @@ import akka.actor.SupervisorStrategy._
 import akka.routing.RoundRobinPool
 import akka.util.ByteString
 
-import capture.DeviceActorDirectory
 import capture.GatewayActorDirectory
+import controllers.DeviceManager
 
 /** An Actor representing a single ModbusDevice.
   *
@@ -36,11 +36,10 @@ class ModbusDeviceActor(
 
 object ModbusDeviceActor {
 
-  import DeviceActorDirectory.Protocol.Register
-
-  def registerWithDirectory(system: ActorSystem): Unit = {
-    val directory = system.actorSelection(s"/user/${DeviceActorDirectory.name}")
-    directory ! Register {
+  def registerWithManager(system: ActorSystem): Unit = {
+    import DeviceManager.Protocol.Register
+    val manager = system.actorSelection(s"/user/${DeviceManager.name}")
+    manager ! Register {
       case (d: ModbusDevice) => props(d)
     }
   }

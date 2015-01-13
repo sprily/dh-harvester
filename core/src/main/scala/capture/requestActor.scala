@@ -9,6 +9,7 @@ import akka.actor.ActorLogging
 import akka.actor.Props
 import akka.actor.ReceiveTimeout
 
+import controllers.DeviceManager
 import network.DeviceLike
 import scheduling.Schedule
 import scheduling.TargetLike
@@ -20,10 +21,9 @@ class RequestActor(
 
   import RequestActor._
   import RequestActor.Protocol._
-  import DeviceActorDirectory.{Protocol => DeviceProtocol}
 
   private val device = request.device
-  private val deviceActor = context.actorSelection(s"/user/${DeviceActorDirectory.name}")
+  private val deviceManager = context.actorSelection(s"/user/${DeviceManager.name}")
 
   /** Akka stuff **/
   private implicit val dispatcher = context.system.dispatcher
@@ -41,7 +41,7 @@ class RequestActor(
   protected def pollNowRcvd() = {
     log.info(s"Polling device $device")
     context.setReceiveTimeout(target.timeoutDelay())
-    deviceActor ! DeviceProtocol.Forward(device, request)
+    deviceManager ! request
   }
 
   protected def timeoutRcvd() = {

@@ -18,7 +18,9 @@ lazy val harvester = project in file("harvester") dependsOn(core)
 
 libraryDependencies in ThisBuild += "org.specs2" %% "specs2-core" % "2.4.6" % "test"
 
-libraryDependencies in ThisBuild += "org.specs2" %% "specs2-scalacheck" % "2.4.6-scalaz-7.0.6"
+libraryDependencies in ThisBuild += "org.specs2" %% "specs2-scalacheck" % "2.4.6-scalaz-7.0.6" % "test"
+
+libraryDependencies in ThisBuild += "org.typelevel" %% "scalaz-specs2" % "0.3.0" % "test"
 
 resolvers in ThisBuild += "Sprily 3rd Party" at "http://repo.sprily.co.uk/nexus/content/repositories/thirdparty"
 

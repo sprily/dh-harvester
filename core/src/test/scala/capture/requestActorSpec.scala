@@ -21,6 +21,7 @@ import org.specs2.time.NoTimeConversions
 import network.DeviceLike
 import network.DeviceId
 
+import controllers.DeviceManager
 import scheduling.Instant
 import scheduling.Schedule
 import scheduling.TargetLike
@@ -91,9 +92,10 @@ class TestContext extends AkkaSpecs2Support {
   def requestActor = TestActorRef(new RequestActor(request, schedule, fakeBus))
 
   def setupFakeDeviceActor(): Unit = {
-    val directory = system.actorOf(DeviceActorDirectory.props, DeviceActorDirectory.name)
-    directory ! DeviceActorDirectory.Protocol.Register {
+    val manager = system.actorOf(DeviceManager.props, DeviceManager.name)
+    manager ! DeviceManager.Protocol.Register {
       case _ => Props(new ForwardingActor())
     }
+    manager ! DeviceManager.Protocol.SetDevices(List(fakeDevice))
   }
 }
