@@ -35,7 +35,7 @@ class InstanceManager extends Actor with ActorLogging {
 
   private[this] def setConfig(c: InstanceConfig) = {
     devices = c.devices.map { d => (d.id -> d) }.toMap
-    val requests = c.requests.map { req => ScheduledRequest(req, req.schedule) }
+    val requests = c.requests.map { req => ScheduledRequest(req._1, req._2) }
     requestManager ! PersistentRequests(requests)
   }
 
@@ -54,7 +54,7 @@ object InstanceManager {
 
     trait ManagedDevice {
       type Request <: RequestLike
-      type ScheduledRequest = Request with Scheduled
+      type ScheduledRequest = (Request, Schedule)
       type Device <: Request#Device
       def device: Device
       def requests: Seq[ScheduledRequest]

@@ -52,58 +52,58 @@ trait JsonUtils {
 
 trait DeviceFormats extends DefaultJsonProtocol with JsonUtils {
 
-  implicit val tcpGateway = jsonFormat2(TCPGatewayDTO)
-  implicit val modbusDevice = jsonFormat4(ManagedModbusDevice)
-
-  implicit val device: RootJsonFormat[ManagedDevice] = {
-    new RootJsonFormat[ManagedDevice] {
-
-      def read(js: JsValue): ManagedDevice = {
-        js.asJsObject.fields.get("type").map {
-          case JsString("modbus") => modbusDevice.read(js)
-          case JsString(other)    => readError(s"Unable to match device type: $other")
-          case _                  => readError("String 'type' field required")
-        } getOrElse(readError("'type' field missing"))
-      }
-
-      def write(device: ManagedDevice): JsValue = {
-        device match {
-          case (d: ManagedModbusDevice) => modbusDevice.withTypeName("modbus").write(d)
-          case _                        => writeError(s"Unable to write device $device")
-        }
-      }
-    }
-  }
+//  implicit val tcpGateway = jsonFormat2(TCPGatewayDTO)
+//  implicit val modbusDevice = jsonFormat4(ManagedModbusDevice)
+//
+//  implicit val device: RootJsonFormat[ManagedDevice] = {
+//    new RootJsonFormat[ManagedDevice] {
+//
+//      def read(js: JsValue): ManagedDevice = {
+//        js.asJsObject.fields.get("type").map {
+//          case JsString("modbus") => modbusDevice.read(js)
+//          case JsString(other)    => readError(s"Unable to match device type: $other")
+//          case _                  => readError("String 'type' field required")
+//        } getOrElse(readError("'type' field missing"))
+//      }
+//
+//      def write(device: ManagedDevice): JsValue = {
+//        device match {
+//          case (d: ManagedModbusDevice) => modbusDevice.withTypeName("modbus").write(d)
+//          case _                        => writeError(s"Unable to write device $device")
+//        }
+//      }
+//    }
+//  }
 
 }
 
 trait RequestFormats extends DefaultJsonProtocol with JsonUtils {
 
-  implicit val modbusReq = jsonFormat3(ModbusRequestDTO)
-  implicit val modbusRequests = jsonFormat3(ModbusDeviceRequests)
-
-  implicit val deviceRequests: RootJsonFormat[DeviceRequests] = {
-    new RootJsonFormat[DeviceRequests] {
-
-      def read(js: JsValue): DeviceRequests = {
-        js.asJsObject.fields.get("type").map {
-          case JsString("modbus") => modbusRequests.read(js)
-          case JsString(other)    => readError(s"Unable to match request type: $other")
-          case _                  => readError("String 'type' field required")
-        } getOrElse(readError("'type' field missing"))
-      }
-
-      def write(req: DeviceRequests): JsValue = {
-        req match {
-          case (r: ModbusDeviceRequests) => modbusRequests.withTypeName("modbus").write(r)
-          case _                         => writeError(s"Unable to write request $req")
-        }
-      }
-
-    }
-  }
-
-  implicit val managedRequests = jsonFormat1(ManagedRequests)
+//  implicit val modbusReq = jsonFormat3(ModbusRequestDTO)
+//  implicit val modbusRequests = jsonFormat3(ModbusDeviceRequests)
+//
+//  implicit val deviceRequests: RootJsonFormat[DeviceRequests] = {
+//    new RootJsonFormat[DeviceRequests] {
+//
+//      def read(js: JsValue): DeviceRequests = {
+//        js.asJsObject.fields.get("type").map {
+//          case JsString("modbus") => modbusRequests.read(js)
+//          case JsString(other)    => readError(s"Unable to match request type: $other")
+//          case _                  => readError("String 'type' field required")
+//        } getOrElse(readError("'type' field missing"))
+//      }
+//
+//      def write(req: DeviceRequests): JsValue = {
+//        req match {
+//          case (r: ModbusDeviceRequests) => modbusRequests.withTypeName("modbus").write(r)
+//          case _                         => writeError(s"Unable to write request $req")
+//        }
+//      }
+//
+//    }
+//  }
+//
+//  implicit val managedRequests = jsonFormat1(ManagedRequests)
 
 }
 

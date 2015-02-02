@@ -14,4 +14,3 @@ trait RequestLike {
   val device: Device
   val selection: Selection
 }
-

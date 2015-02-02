@@ -21,7 +21,6 @@ import uk.co.sprily.mqtt.Topic
 
 import api.JsonFormats
 import api.JsonFormats._
-import api.ManagedDevice
 import api.ManagedRequests
 
 import capture.RequestActorManager.Protocol._
