@@ -59,10 +59,14 @@ object Main extends App {
     DeviceManager.props,
     DeviceManager.name)
 
+  val instanceManager = system.actorOf(
+    InstanceManager.props,
+    InstanceManager.name)
+
+  instanceManager ! InstanceManager.Protocol.InstanceConfig(Nil)
 
   ModbusGatewayActor.registerWithDirectory(system)
   ModbusDeviceActor.registerWithManager(system)
-  devices ! DeviceManager.Protocol.SetDevices(List(device))
 
   import RequestActorManager.Protocol.PersistentRequests
   import RequestActorManager.Protocol.ScheduledRequest

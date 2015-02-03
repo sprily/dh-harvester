@@ -45,6 +45,9 @@ class InstanceManager extends Actor with ActorLogging {
 
 object InstanceManager {
 
+  def name = "instance-manager"
+  def props = Props(new InstanceManager())
+
   object Protocol {
 
     case class InstanceConfig(managedDevices: Seq[ManagedDevice]) {
@@ -64,5 +67,6 @@ object InstanceManager {
       val schedule: Schedule
     }
   }
+
 
 }
