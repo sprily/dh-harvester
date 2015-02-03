@@ -32,14 +32,12 @@ class RequestActorSpec extends SpecificationLike
   "A RequestActor" should {
 
     "Poll the device when started" in new TestContext {
-      setupFakeDeviceActor()
       val underTest = requestActor
 
       expectMsgType[RequestLike] must === (request)
     }
 
     "Send results to the results bus" in new TestContext {
-      setupFakeDeviceActor()
       val measurement = "measurement"
       val underTest = requestActor
       val response = fakeResponse(measurement)
@@ -64,6 +62,14 @@ class TestContext extends AkkaSpecs2Support {
   lazy val basetime = Instant.now()
   lazy val dt = LocalDateTime.now()
   lazy val fakeBus = new FakeResponseBus()
+  lazy val deviceManager = {
+    val manager = system.actorOf(DeviceManager.props, DeviceManager.name)
+    manager ! DeviceManager.Protocol.Register {
+      case _ => Props(new ForwardingActor())
+    }
+    manager ! DeviceManager.Protocol.SetDevices(List(fakeDevice))
+    manager
+  }
 
   case class FakeDevice(id: DeviceId) extends DeviceLike {
     type Address = String
@@ -88,14 +94,5 @@ class TestContext extends AkkaSpecs2Support {
   def schedule = Schedule.single(3.seconds)
   def request = FakeRequest(1, fakeDevice)
   def fakeResponse(m: String) = FakeResponse(m, fakeDevice)
-
-  def requestActor = TestActorRef(new RequestActor(request, schedule, fakeBus))
-
-  def setupFakeDeviceActor(): Unit = {
-    val manager = system.actorOf(DeviceManager.props, DeviceManager.name)
-    manager ! DeviceManager.Protocol.Register {
-      case _ => Props(new ForwardingActor())
-    }
-    manager ! DeviceManager.Protocol.SetDevices(List(fakeDevice))
-  }
+  def requestActor = TestActorRef(new RequestActor(request, schedule, fakeBus, deviceManager))
 }

@@ -19,8 +19,9 @@ import network.DeviceLike
 import scheduling.Schedule
 
 /** Manages the set of active RequestActors **/
-class RequestActorManager(bus: ResponseBus) extends Actor
-                                               with ActorLogging {
+class RequestActorManager(
+    bus: ResponseBus,
+    deviceManager: ActorRef) extends Actor with ActorLogging {
 
   import RequestActorManager.Child
   import RequestActorManager.Protocol._
@@ -54,7 +55,7 @@ class RequestActorManager(bus: ResponseBus) extends Actor
   }
 
   final private def spawnChild(r: ScheduledRequest) = {
-    val ref = context.actorOf(RequestActor.props(r.request, r.schedule, bus))
+    val ref = context.actorOf(RequestActor.props(r.request, r.schedule, bus, deviceManager))
     requests = requests + (r.id -> Child(r.request, ref))
     context.watch(ref)
   }
@@ -82,6 +83,10 @@ class RequestActorManager(bus: ResponseBus) extends Actor
 }
 
 object RequestActorManager {
+
+  def props(bus: ResponseBus, deviceManager: ActorRef) = Props(
+    new RequestActorManager(bus, deviceManager)
+  )
 
   protected case class Child(r: RequestLike, ref: ActorRef)
 

@@ -74,8 +74,8 @@ object Main extends App {
   val bus = new AkkaResponseBus()
   val client = Await.result(AsyncSimpleClient.connect(MqttOptions.cleanSession()), 3.seconds)
 
-  val manager = system.actorOf(Props(
-    new RequestActorManager(bus)),
+  val manager = system.actorOf(
+    RequestActorManager.props(bus, devices),
     "request-manager")
 
   val publisher = system.actorOf(Props(

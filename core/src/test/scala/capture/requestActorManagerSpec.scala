@@ -33,21 +33,18 @@ class RequestActorManagerSpec extends SpecificationLike
   "A RequestActorManager" should {
 
     "Make adhoc requests to a given device" in new TestContext() {
-      setupFakeDeviceActor()
       val underTest = manager
       underTest ! adhocRequest
       expectMsgType[RequestLike] must === (adhocRequest)
     }
 
     "Ignore ScheduledRequests to a given device" in new TestContext() {
-      setupFakeDeviceActor()
       val underTest = manager
       underTest ! ScheduledRequest(adhocRequest, Schedule.single(3.seconds))
       expectNoMsg(300.millis)
     }
 
     "Make persistent requests to given devices" in new TestContext() {
-      setupFakeDeviceActor()
       val underTest = manager
       underTest ! persistentRequests
 
@@ -57,7 +54,6 @@ class RequestActorManagerSpec extends SpecificationLike
     }
 
     "Remove requests which have completed" in new TestContext() {
-      setupFakeDeviceActor()
       val underTest = manager
 
       underTest ! adhocRequest
@@ -74,11 +70,11 @@ class RequestActorManagerSpec extends SpecificationLike
       val underTest = logExceptions(managerProps)
       underTest ! adhocRequest
       underTest ! adhocRequest  // same request id "actor name [10] is not unique!"
+      expectMsgType[RequestLike]
       expectNoMsg
     }
 
     "Update persistent requests" in new TestContext() {
-      setupFakeDeviceActor()
       val underTest = manager
       
       // send the initial request
@@ -100,6 +96,16 @@ class RequestActorManagerSpec extends SpecificationLike
     lazy val dt = LocalDateTime.now()
     lazy val fakeBus = new FakeResponseBus()
     lazy val fakeDevice = FakeDevice(DeviceId(100))
+    lazy val deviceManager = {
+      val manager = system.actorOf(DeviceManager.props)
+      manager ! DeviceManager.Protocol.Register {
+        case _ => Props(new ForwardingActor(
+          respondWith = { case _ => Some(FakeResponse) }
+        ))
+      }
+      manager ! DeviceManager.Protocol.SetDevices(List(fakeDevice))
+      manager
+    }
    
     case class FakeDevice(id: DeviceId) extends DeviceLike {
       type Address = String
@@ -128,18 +134,7 @@ class RequestActorManagerSpec extends SpecificationLike
     ))
 
     def manager = TestActorRef(managerProps)
-    def managerProps = Props(new RequestActorManager(fakeBus))
-
-    def setupFakeDeviceActor(): Unit = {
-      val manager = system.actorOf(DeviceManager.props, DeviceManager.name)
-      manager ! DeviceManager.Protocol.Register {
-        case _ => Props(new ForwardingActor(
-          respondWith = { case _ => Some(FakeResponse) }
-        ))
-      }
-      manager ! DeviceManager.Protocol.SetDevices(List(fakeDevice))
-    }
-
+    def managerProps = Props(new RequestActorManager(fakeBus, deviceManager))
   }
 }
 

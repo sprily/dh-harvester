@@ -6,6 +6,7 @@ import scala.concurrent.duration._
 
 import akka.actor.Actor
 import akka.actor.ActorLogging
+import akka.actor.ActorRef
 import akka.actor.Props
 import akka.actor.ReceiveTimeout
 
@@ -17,13 +18,13 @@ import scheduling.TargetLike
 class RequestActor(
     val request: RequestLike,
     val schedule: Schedule,
-    val bus: ResponseBus) extends Actor with ActorLogging {
+    val bus: ResponseBus,
+    val deviceManager: ActorRef) extends Actor with ActorLogging {
 
   import RequestActor._
   import RequestActor.Protocol._
 
   private val device = request.device
-  private val deviceManager = context.actorSelection(s"/user/${DeviceManager.name}")
 
   /** Akka stuff **/
   private implicit val dispatcher = context.system.dispatcher
@@ -83,8 +84,9 @@ object RequestActor {
 
   def props(request: RequestLike,
             schedule: Schedule,
-            bus: ResponseBus): Props = Props(
-    new RequestActor(request, schedule, bus)
+            bus: ResponseBus,
+            deviceManager: ActorRef): Props = Props(
+    new RequestActor(request, schedule, bus, deviceManager)
   )
 
   protected[capture] case object Protocol {
