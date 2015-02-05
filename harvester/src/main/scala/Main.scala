@@ -50,17 +50,14 @@ object Main extends App {
   )
 
   val system = ActorSystem("all-my-actors", config)
+  val bus = new AkkaResponseBus()
 
   val gateways = system.actorOf(
     GatewayActorDirectory.props,
     GatewayActorDirectory.name)
 
-  val devices = system.actorOf(
-    DeviceManager.props,
-    DeviceManager.name)
-
   val instanceManager = system.actorOf(
-    InstanceManager.props,
+    InstanceManager.props(bus),
     InstanceManager.name)
 
   instanceManager ! InstanceManager.Protocol.InstanceConfig(Nil)
@@ -71,12 +68,7 @@ object Main extends App {
   import RequestActorManager.Protocol.PersistentRequests
   import RequestActorManager.Protocol.ScheduledRequest
 
-  val bus = new AkkaResponseBus()
   val client = Await.result(AsyncSimpleClient.connect(MqttOptions.cleanSession()), 3.seconds)
-
-  val manager = system.actorOf(
-    RequestActorManager.props(bus, devices),
-    "request-manager")
 
   val publisher = system.actorOf(Props(
     new ResultsPublisher( Topic("test-org"), bus, client)), "mqtt-publisher")
@@ -88,8 +80,7 @@ object Main extends App {
     device,
     ModbusRegisterRange(50520, 50524))
 
-  manager ! PersistentRequests(List(
-    ScheduledRequest(request, Schedule.each(3.seconds))))
+  instanceManager ! InstanceManager.Protocol.InstanceConfig(List(request))
 
   println("Press enter to stop")
   readLine()

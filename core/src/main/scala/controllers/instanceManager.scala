@@ -15,16 +15,35 @@ import network.DeviceId
 import network.DeviceLike
 import scheduling.Schedule
 
-trait DeviceManagerProvider {
-  def deviceManagerProps: Props
+protected[controllers] trait DeviceManagerProvider {
+  def deviceMgrProps: Props
 }
 
-class InstanceManager extends Actor
-                         with ActorLogging {
-  this: DeviceManagerProvider =>
+protected[controllers] trait RequestManagerProvider {
+  def requestMgrProps(bus: ResponseBus, deviceMgr: ActorRef): Props
+}
+
+protected[controllers] trait ManagerProvider extends DeviceManagerProvider with RequestManagerProvider
+
+class InstanceManager(bus: ResponseBus) extends Actor
+                                           with ActorLogging {
+  this: ManagerProvider =>
 
   import InstanceManager.Protocol._
   import RequestActorManager.Protocol._
+
+  /** The following are initialised with every (re)start **/
+  private[this] var deviceMgr: ActorRef = _
+  private[this] var reqMgr:    ActorRef = _
+
+
+  /** Actor Hooks **/
+  override def preStart(): Unit = {
+    log.info("Creating device manager")
+    deviceMgr = context.actorOf(deviceMgrProps, "device-manager")
+    log.info("Creating request manager")
+    reqMgr    = context.actorOf(requestMgrProps(bus, deviceMgr), "request-manager")
+  }
 
   def receive = {
     case (c: InstanceConfig) => setConfig(c)
@@ -32,25 +51,24 @@ class InstanceManager extends Actor
   }
 
   private[this] def setConfig(c: InstanceConfig) = {
-    deviceManager ! c.devices
-    scheduledRequestsManager ! c.requests
+    deviceMgr ! c.devices
+    reqMgr ! c.requests
   }
 
   private[this] def sendAdhocRequest(r: RequestLike) = {
-    adhocMgr forward r
+    //adhocMgr forward r
   }
-
-  private[this] def scheduledRequestsManager = context.actorSelection("TODO")
-  private[this] def deviceManager            = context.actorSelection("TODO")
-  private[this] def adhocMgr                 = context.actorSelection("TODO")
 
 }
 
 object InstanceManager {
 
   def name = "instance-manager"
-  def props = Props(new InstanceManager() with DeviceManagerProvider {
-    override def deviceManagerProps = ???
+  def props(bus: ResponseBus) = Props(new InstanceManager(bus) with ManagerProvider {
+    override def deviceMgrProps = DeviceManager.props
+    override def requestMgrProps(bus: ResponseBus, deviceMgr: ActorRef) = {
+      RequestActorManager.props(bus, deviceMgr)
+    }
   })
 
   object Protocol {
