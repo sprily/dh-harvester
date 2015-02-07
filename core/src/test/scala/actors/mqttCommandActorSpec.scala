@@ -33,6 +33,8 @@ class MqttCommandActorSpec extends SpecificationLike
                               with JsonUtils
                               with NoTimeConversions {
 
+  import MqttCommandActor.Types._
+
   "A MqttCommandActor" should {
  
     "write a successful response back to the broker" in new Context {
@@ -109,8 +111,8 @@ class MqttCommandActorSpec extends SpecificationLike
     class TestCommandActor extends MqttCommandActor(root, fakeClient) {
       type Command = Cmd
       type Result = Res
-      override def commandJF = jsonFormat1(Cmd)
-      override def resultJF = jsonFormat1(Res)
+      override def commandJson = jsonFormat1(Cmd)
+      override def resultJson = jsonFormat1(Res)
       override def childProps(id: RequestId, c: Command) = Props(new Actor() {
 
         def receive = {

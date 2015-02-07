@@ -33,43 +33,18 @@ import api.JsonUtils
 abstract class MqttCommandActor(
     root: TopicPattern,
     client: ClientModule[Cont]#Client) extends Actor
-                                          with ActorLogging
-                                          with JsonUtils {
+                                          with ActorLogging {
 
-  // supporting types
-  trait Error { def msg: String }
-  case class CommandError(msg: String) extends Error
-  case class InternalError(msg: String) extends Error
-  case object TimedOutError extends Error { val msg = "Timed out waiting for response.  Try again" }
-  case class RequestId(s: String)
+  import MqttCommandActor.Types._
+
   type Command
   type Result
-  implicit def commandJF: JsonFormat[Command]
-  implicit def resultJF: JsonFormat[Result]
-  implicit def disjJF[A: JsonWriter, B: JsonWriter]: JsonWriter[\/[A,B]] = new JsonWriter[\/[A,B]] {
-    def write(e: \/[A,B]) = e.fold(
-      a => implicitly[JsonWriter[A]].write(a),
-      b => implicitly[JsonWriter[B]].write(b)
-    )
-  }
-  implicit def errorJF: JsonWriter[Error] = new JsonWriter[Error] {
-    def write(e: Error) = JsObject("error" -> JsString(e.msg))
-  }
-  case class Response(id: RequestId, result: \/[Error,Result])
-  case class Request(id: RequestId, payload: ByteString) {
+  implicit def commandJson: JsonReader[Command]
+  implicit def resultJson: JsonWriter[Result]
 
-    final def json: Try[JsObject] = Try {
-      payload.decodeString("UTF-8").parseJson.asJsObject
-    }
+  case class Response(id: RequestId, result: \/[CommandError,Result])
 
-    def extract[T: JsonReader] = for {
-      js <- json
-      t <- js.tryConvertTo[T]
-    } yield t
-  }
-
-
-  private[this] var results = Map.empty[RequestId, Option[\/[Error,Result]]]
+  private[this] var results = Map.empty[RequestId, Option[\/[CommandError,Result]]]
   private[this] var requests = Map.empty[ActorRef, Request]
 
   /** Abstract methods that need implementing **/
@@ -83,7 +58,7 @@ abstract class MqttCommandActor(
     */
   override val supervisorStrategy = OneForOneStrategy() {
     case e: Exception =>
-      results = results + (requests(sender).id -> Some(CommandError(e.getMessage).left))
+      results = results + (requests(sender).id -> Some(RequestError(e.getMessage).left))
       SupervisorStrategy.Stop
   }
 
@@ -110,7 +85,7 @@ abstract class MqttCommandActor(
           child ! c
         case Failure(e) =>
           log.warning(s"Error extracting Command on '$root': $e")
-          respondWithError(CommandError(e.getMessage), r)
+          respondWithError(RequestError(e.getMessage), r)
           cleanup(r)
       }
 
@@ -132,12 +107,12 @@ abstract class MqttCommandActor(
   }
 
   final private def sendResponse(r: Request) = {
-    val result: \/[Error,Result] = results.get(r.id).flatten.getOrElse(InternalError("No response received (internal error)").left)
+    val result: \/[CommandError,Result] = results.get(r.id).flatten.getOrElse(InternalError("No response received (internal error)").left)
     val payload = result.toJson.prettyPrint.getBytes("UTF-8")
     client.publish(topic=responseTopic(r), payload=payload)
   }
 
-  final private def respondWithError(e: Error, r: Request) = {
+  final private def respondWithError(e: CommandError, r: Request) = {
     client.publish(topic = responseTopic(r),
                    payload = e.toJson.prettyPrint.getBytes("UTF-8"))
   }
@@ -164,6 +139,51 @@ abstract class MqttCommandActor(
 
   final private def responseTopic(r: Request): Topic = {
     Topic(root.path + s"/commands/${r.id.s}/response")
+  }
+
+}
+
+object MqttCommandActor extends JsonUtils {
+
+  import Types.CommandError
+
+  // supporting types
+  object Types {
+    trait CommandError { def msg: String }
+    case class RequestError(msg: String) extends CommandError
+    case class InternalError(msg: String) extends CommandError
+    case object TimedOutError extends CommandError {
+      val msg = "Timed out waiting for response."
+    }
+
+    case class RequestId(s: String)
+    case class Request(id: RequestId, payload: ByteString) {
+
+      final def json: Try[JsObject] = Try {
+        payload.decodeString("UTF-8").parseJson.asJsObject
+      }
+
+      def extract[T: JsonReader] = for {
+        js <- json
+        t <- js.tryConvertTo[T]
+      } yield t
+    }
+  }
+
+  protected[MqttCommandActor] implicit def disjJson[A: JsonWriter, B: JsonWriter]
+                                                    : JsonWriter[\/[A,B]] = {
+    new JsonWriter[\/[A,B]] {
+      def write(e: \/[A,B]) = e.fold(
+        a => implicitly[JsonWriter[A]].write(a),
+        b => implicitly[JsonWriter[B]].write(b)
+      )
+    }
+  }
+
+  protected[MqttCommandActor] implicit def errorJson: JsonWriter[CommandError] = {
+    new JsonWriter[CommandError] {
+      def write(e: CommandError) = JsObject("error" -> JsString(e.msg))
+    }
   }
 
 }
