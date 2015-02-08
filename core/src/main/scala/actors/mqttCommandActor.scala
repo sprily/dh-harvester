@@ -37,18 +37,29 @@ abstract class MqttCommandActor(
 
   import MqttCommandActor.Types._
 
+  /** Abstract members **/
   type Command
   type Result
+  protected def childProps(id: RequestId, c: Command): Props
   implicit def commandJson: JsonReader[Command]
   implicit def resultJson: JsonWriter[Result]
 
-  case class Response(id: RequestId, result: \/[CommandError,Result])
+  /** Returned by children to communicate Result or some sort of error **/
+  type Payload = \/[CommandError,Result]
+  protected case class Response(id: RequestId, payload: Payload)
+  protected object Response {
+    def apply(r: Request, err: CommandError): Response = {
+      Response(r.id, err.left)
+    }
 
-  private[this] var results = Map.empty[RequestId, Option[\/[CommandError,Result]]]
+    def apply(r: Request, result: Result): Response = {
+      Response(r.id, result.right)
+    }
+  }
+
+  /** Private state **/
+  private[this] var responses = Map.empty[RequestId, Response]
   private[this] var requests = Map.empty[ActorRef, Request]
-
-  /** Abstract methods that need implementing **/
-  protected def childProps(id: RequestId, c: Command): Props
 
   /** Actor Hooks **
     *
@@ -58,7 +69,7 @@ abstract class MqttCommandActor(
     */
   override val supervisorStrategy = OneForOneStrategy() {
     case e: Exception =>
-      results = results + (requests(sender).id -> Some(RequestError(e.getMessage).left))
+      collect(Response(requests(sender), RequestError(e.getMessage)))
       SupervisorStrategy.Stop
   }
 
@@ -72,7 +83,6 @@ abstract class MqttCommandActor(
     }
   }
 
-
   def receive = {
 
     case (r: Request) =>
@@ -85,60 +95,59 @@ abstract class MqttCommandActor(
           child ! c
         case Failure(e) =>
           log.warning(s"Error extracting Command on '$root': $e")
-          respondWithError(RequestError(e.getMessage), r)
+          sendResponse(Response(r, RequestError(e.getMessage)))
           cleanup(r)
       }
 
     case (r: Response) =>
       log.info(s"Received Response to request ${r.id}")
-      results = results + (r.id -> Some(r.result))
+      collect(r)
       context.stop(sender)
 
     case Terminated(child) =>
       log.info(s"$child terminated, cleaning up")
       context.unwatch(child)
       requests.get(child).foreach { request =>
-        sendResponse(request)
+        val response = responses.get(request.id).getOrElse(Response(request, InternalError))
+        sendResponse(response)
         requests = requests - child
-        results = results - request.id
+        responses = responses - request.id
         cleanup(request)
       }
 
   }
 
-  final private def sendResponse(r: Request) = {
-    val result: \/[CommandError,Result] = results.get(r.id).flatten.getOrElse(InternalError("No response received (internal error)").left)
-    val payload = result.toJson.prettyPrint.getBytes("UTF-8")
-    client.publish(topic=responseTopic(r), payload=payload)
+  private def sendResponse(r: Response) = {
+    val payload = r.payload.toJson.prettyPrint.getBytes("UTF-8")
+    client.publish(topic=responseTopic(r.id), payload=payload)
   }
 
-  final private def respondWithError(e: CommandError, r: Request) = {
-    client.publish(topic = responseTopic(r),
-                   payload = e.toJson.prettyPrint.getBytes("UTF-8"))
+  private def collect(r: Response) = {
+    responses = responses + (r.id -> r)
   }
 
   /** Clean up after a Request by sending an empty payload to the
     * request's endpoint.
     */
-  final private def cleanup(r: Request): Unit = {
-    client.publish(topic = requestTopic(r),
+  private def cleanup(r: Request): Unit = {
+    client.publish(topic = requestTopic(r.id),
                    payload = Array.empty[Byte])
   }
 
-  final private def extractId(msg: MqttMessage): RequestId = {
+  private def extractId(msg: MqttMessage): RequestId = {
     RequestId(msg.topic.path.split("/").init.last)
   }
 
-  final private def requestPattern: TopicPattern = {
+  private def requestPattern: TopicPattern = {
     TopicPattern(root.path + "/commands/+/request")
   }
 
-  final private def requestTopic(r: Request): Topic = {
-    Topic(root.path + s"/commands/${r.id.s}/request")
+  private def requestTopic(id: RequestId): Topic = {
+    Topic(root.path + s"/commands/${id.s}/request")
   }
 
-  final private def responseTopic(r: Request): Topic = {
-    Topic(root.path + s"/commands/${r.id.s}/response")
+  private def responseTopic(id: RequestId): Topic = {
+    Topic(root.path + s"/commands/${id.s}/response")
   }
 
 }
@@ -147,14 +156,13 @@ object MqttCommandActor extends JsonUtils {
 
   import Types.CommandError
 
-  // supporting types
+  // Supporting types
   object Types {
+
     trait CommandError { def msg: String }
     case class RequestError(msg: String) extends CommandError
-    case class InternalError(msg: String) extends CommandError
-    case object TimedOutError extends CommandError {
-      val msg = "Timed out waiting for response."
-    }
+    case object InternalError extends CommandError { val msg = "Internal Error" }
+    case object TimedOutError extends CommandError { val msg = "Timed out waiting for response." }
 
     case class RequestId(s: String)
     case class Request(id: RequestId, payload: ByteString) {
