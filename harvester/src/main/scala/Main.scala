@@ -75,7 +75,7 @@ object Main extends App {
     new ResultsPublisher( Topic("test-org"), bus, client)), "mqtt-publisher")
 
   val api = system.actorOf(
-    InstanceApi.props(TopicPattern("test-org/instance-config"),
+    InstanceApi.props(Topic("test-org/instance-config"),
                       client),
     "api-instance-config")
 

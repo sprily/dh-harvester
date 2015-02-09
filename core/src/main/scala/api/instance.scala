@@ -17,36 +17,36 @@ import uk.co.sprily.mqtt.TopicPattern
 import uk.co.sprily.mqtt.Topic
 import uk.co.sprily.mqtt.MqttMessage
 
-import actors.MqttCommandActor
+import actors.ApiEndpoint
 
 class InstanceApi(
-    root: TopicPattern,
+    root: Topic,
     client: ClientModule[Cont]#Client)
-      extends MqttCommandActor(root, client) {
+      extends ApiEndpoint(root, client) {
 
-  import MqttCommandActor.Types._
+  import ApiEndpoint.Types._
   import InstanceApi._
 
   type Command = InstanceConfiguration
   type Result = String
-  override def commandJson = configJson
-  override def resultJson  = implicitly[JsonWriter[String]]
+  override def commandReader = configJson
+  override def resultWriter  = implicitly[JsonWriter[String]]
 
-  override def childProps(id: RequestId, c: InstanceConfiguration) = {
-    Props(new Actor() {
-      def receive = {
-        case (config: InstanceConfiguration) =>
-          context.parent ! Response(id, TimedOutError.left)
-          //context.parent ! Response(id, "foobar".right)
-      }
-    })
-  }
+  //override def childProps(id: RequestId, c: InstanceConfiguration) = {
+  //  Props(new Actor() {
+  //    def receive = {
+  //      case (config: InstanceConfiguration) =>
+  //        context.parent ! Response(id, TimedOutError.left)
+  //        //context.parent ! Response(id, "foobar".right)
+  //    }
+  //  })
+  //}
 
 }
 
 object InstanceApi extends DefaultJsonProtocol {
 
-  def props(root: TopicPattern, client: ClientModule[Cont]#Client) = {
+  def props(root: Topic, client: ClientModule[Cont]#Client) = {
     Props(new InstanceApi(root, client))
   }
 

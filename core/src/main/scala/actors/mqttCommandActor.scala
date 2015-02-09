@@ -28,6 +28,168 @@ import uk.co.sprily.mqtt.MqttMessage
 
 import api.JsonUtils
 
+class RequestActor[Command:JsonReader, Result](
+    client: ClientModule[Cont]#Client) extends Actor with ActorLogging {
+
+  import ApiEndpoint.Protocol.RawRequest
+
+  def receive = {
+    case (raw: RawRequest) =>
+      raw.extract[Command] match {
+        case Success(cmd) =>
+          log.info(s"Received Command $cmd")
+        case Failure(e) =>
+          log.warning(s"Failed to extract Command: $e")
+      }
+  }
+
+}
+
+object RequestActor {
+  def props[Command:JsonReader, Result](client: ClientModule[Cont]#Client) = {
+    Props(new RequestActor[Command,Result](client))
+  }
+}
+
+abstract class ApiEndpoint(
+    root: Topic,
+    client: ClientModule[Cont]#Client) extends Actor
+                                          with ActorLogging {
+
+  import ApiEndpoint.Protocol._
+  import ApiEndpoint.Types._
+
+  type Command
+  type Result
+  implicit def commandReader: JsonReader[Command]
+  implicit def resultWriter: JsonWriter[Result]
+
+  /** Derived types **/
+   type ResponseBody = \/[CommandError,Result]
+   case class Request(id: RequestId, command: Command)
+   case class Response(id: RequestId, body: ResponseBody)
+
+   private sealed trait ChildStatus
+   private case class Active(child: ActorRef) extends ChildStatus
+   private case class Terminating(child: ActorRef) extends ChildStatus
+
+  /** private state **/
+  private[this] var requests = Map.empty[RequestId, ActorRef]
+  private[this] var terminating = Map.empty[RequestId, ActorRef]
+  private[this] var redeliver = Map.empty[ActorRef, List[RawRequest]]
+
+  /** Actor Hooks **
+    *
+    *  - Perform broker subscription upon *first* initialisation only.
+    */
+  override def postRestart(reason: Throwable): Unit = ()
+  override def preStart(): Unit = {
+    log.info(s"Initialising API endpoint on: $root")
+    client.data(requestPattern) { msg =>
+      if (msg.payload.nonEmpty) {
+        val raw = RawRequest(id=extractId(msg),
+                             payload=ByteString(msg.payload.toArray))
+        log.info(s"RawRequest received on $root: $raw.id")
+        self ! raw
+      }
+    }
+  }
+
+  def receive = {
+
+    // RawRequest straight from the broker
+    case (raw: RawRequest) =>
+      getOrCreateRequestActor(raw) match {
+        case Active(child)      => child ! raw
+        case Terminating(child) =>
+          log.warning(s"RawRequest matched to terminating child.  Re-delivering later: $raw")
+          redeliver = redeliver |+| Map(child -> List(raw))
+      }
+
+    // Message from a child asking to be stopped
+    case Expire(raw) =>
+      val child = sender
+      context.watch(child)  //  because stopping is asynchronous
+      context.stop(child)
+      terminating = terminating + (raw.id -> child)
+      requests = requests - raw.id
+
+    // Child has actually terminated
+    case Terminated(child) =>
+      context.unwatch(child)
+      terminating.find { case (_,ref) => ref == child } match {
+
+        case None =>  // no Expire message sent from child
+          log.warning(s"RequestActor child terminated abnormally: $child")
+          // expensive tidy up of requests
+          requests = requests.filter { case (_, ref) => ref != child }
+
+        case Some((id, ref)) =>
+          val reqs = redeliver.getOrElse(child, Nil)
+          redeliver = redeliver - child
+          terminating = terminating - id
+          reqs.foreach { self ! _ }
+      }
+  }
+
+  private def getOrCreateRequestActor(raw: RawRequest) = {
+    (requests.get(raw.id), terminating.get(raw.id)) match {
+      case (Some(child), None)       => Active(child)
+      case (None, Some(terminating)) => Terminating(terminating)
+      case (None, None)              => Active(spawnRequestActor(raw))
+      case _  =>
+        throw new IllegalStateException(s"Child is both active *and* terminating: ${raw.id}")
+    }
+  }
+
+  private def spawnRequestActor(raw: RawRequest) = {
+    log.info(s"Spawning new actor for $raw")
+    val child = context.actorOf(RequestActor.props[Command,Result](client), raw.id.s)
+    requests = requests + (raw.id -> child)
+    child
+  }
+
+  /** Extract the RequestId from the given MqttMessage topic **/
+  private def extractId(msg: MqttMessage) = {
+    RequestId(msg.topic.path.split("/").init.last)
+  }
+
+  /** The TopicPattern to subscribe to to receive requests **/
+  private def requestPattern = TopicPattern(root.path + "/api/+/request")
+
+}
+
+object ApiEndpoint extends JsonUtils {
+
+  object Types {
+    case class RequestId(s: String)
+
+    trait CommandError { def msg: String }
+    case class RequestError(msg: String) extends CommandError
+    case object InternalError extends CommandError { val msg = "Internal Error" }
+    case object TimedOutError extends CommandError { val msg = "Timed out waiting for response." }
+  }
+
+  object Protocol {
+    import Types._
+    case class Expire(raw: RawRequest)
+    case class RawRequest(id: RequestId, payload: ByteString) {
+
+      def extract[T:JsonReader] = for {
+        js <- json
+        t  <- js.tryConvertTo[T]
+      } yield t
+
+      private def json = Try {
+        payload.decodeString("UTF-8").parseJson.asJsObject
+      }
+
+    }
+  }
+
+}
+
+
 /** Models receiving commands via an MQTT broker.
  */
 abstract class MqttCommandActor(
