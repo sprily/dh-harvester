@@ -46,8 +46,8 @@ abstract class MqttCommandActor(
 
   /** Returned by children to communicate Result or some sort of error **/
   type Payload = \/[CommandError,Result]
-  protected case class Response(id: RequestId, payload: Payload)
-  protected object Response {
+  case class Response(id: RequestId, payload: Payload)
+  object Response {
     def apply(r: Request, err: CommandError): Response = {
       Response(r.id, err.left)
     }
@@ -77,9 +77,11 @@ abstract class MqttCommandActor(
   override def preStart(): Unit = {
     log.info(s"Initialising MqttCommandActor on root: $root")
     client.data(requestPattern) { msg =>
-      log.info(s"Command message received: $msg")
-      self ! Request(id = extractId(msg),
-                     payload = ByteString(msg.payload.toArray))
+      if (msg.payload.nonEmpty) {
+        log.info(s"Command message received: $msg")
+        self ! Request(id = extractId(msg),
+                       payload = ByteString(msg.payload.toArray))
+      }
     }
   }
 

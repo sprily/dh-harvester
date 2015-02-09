@@ -13,6 +13,7 @@ import akka.actor.Props
 
 import uk.co.sprily.mqtt._
 
+import api._
 import controllers._
 import network._
 import modbus._
@@ -72,6 +73,11 @@ object Main extends App {
 
   val publisher = system.actorOf(Props(
     new ResultsPublisher( Topic("test-org"), bus, client)), "mqtt-publisher")
+
+  val api = system.actorOf(
+    InstanceApi.props(TopicPattern("test-org/instance-config"),
+                      client),
+    "api-instance-config")
 
   val apiActor = system.actorOf(mqtt.Requests.props(Topic("test-org"), client), "api-actor")
 
