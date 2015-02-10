@@ -174,6 +174,7 @@ abstract class ApiEndpoint(
     client: ClientModule[Cont]#Client) extends Actor
                                           with ActorLogging {
 
+  import ApiEndpoint.Internal._
   import ApiEndpoint.Protocol._
   import ApiEndpoint.Types._
 
@@ -185,10 +186,6 @@ abstract class ApiEndpoint(
   implicit def resultTypeTag: TypeTag[Result]
   implicit val timeout: FiniteDuration
   protected val workerProps: Props
-
-  private sealed trait ChildStatus
-  private case class Active(child: ActorRef) extends ChildStatus
-  private case class Terminating(child: ActorRef) extends ChildStatus
 
   /** private state **/
   private[this] var requests = Map.empty[RequestId, ActorRef]
@@ -299,6 +296,12 @@ abstract class ApiEndpoint(
 }
 
 object ApiEndpoint extends JsonUtils {
+
+  private[ApiEndpoint] object Internal {
+    sealed trait ChildStatus
+    case class Active(child: ActorRef) extends ChildStatus
+    case class Terminating(child: ActorRef) extends ChildStatus
+  }
 
   object Types {
 
