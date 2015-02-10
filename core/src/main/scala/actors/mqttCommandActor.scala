@@ -2,6 +2,10 @@ package uk.co.sprily.dh
 package harvester
 package actors
 
+import scala.reflect.runtime.universe._
+
+import scala.concurrent.duration._
+
 import scala.util.Try
 import scala.util.Success
 import scala.util.Failure
@@ -13,6 +17,7 @@ import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.actor.OneForOneStrategy
+import akka.actor.ReceiveTimeout
 import akka.actor.Props
 import akka.actor.SupervisorStrategy
 import akka.actor.Terminated
@@ -28,27 +33,127 @@ import uk.co.sprily.mqtt.MqttMessage
 
 import api.JsonUtils
 
-class RequestActor[Command:JsonReader, Result](
-    client: ClientModule[Cont]#Client) extends Actor with ActorLogging {
+class RequestActor[Command:JsonReader, Result:JsonWriter:TypeTag](
+    workerProps: Props,
+    client: ClientModule[Cont]#Client,
+    responseTopic: Topic,
+    timeout: FiniteDuration) extends Actor with ActorLogging {
 
-  import ApiEndpoint.Protocol.RawRequest
+  import context.become
+  import ApiEndpoint.Types._
+  import ApiEndpoint.Protocol._
+  import RequestActor._
+
+  /** Derived types **/
+  //type ResponseBody = \/[CommandError,Result]
+  //type Response = ApiEndpoint.Types.Response[Result]
+  //case class Response(body: ResponseBody)
+
+  /** Private state **/
+  private[this] var request: Option[RawRequest] = None
+
+  context.setReceiveTimeout(timeout)
+
+  implicit def disjWriter[A: JsonWriter, B: JsonWriter]
+                       : JsonWriter[\/[A,B]] = {
+    new JsonWriter[\/[A,B]] {
+      def write(e: \/[A,B]) = e.fold(
+        a => implicitly[JsonWriter[A]].write(a),
+        b => implicitly[JsonWriter[B]].write(b)
+      )
+    }
+  }
+
+  implicit def errorWriter: JsonWriter[CommandError] = {
+    new JsonWriter[CommandError] {
+      def write(e: CommandError) = JsObject("error" -> JsString(e.msg))
+    }
+  }
 
   def receive = {
+
     case (raw: RawRequest) =>
+      request = Some(raw)
       raw.extract[Command] match {
         case Success(cmd) =>
           log.info(s"Received Command $cmd")
+          issue(cmd)
+          become(awaitingResult)
         case Failure(e) =>
           log.warning(s"Failed to extract Command: $e")
+          write(RequestError(s"Failed to extract command: $e").left)
+          expire()
+          become(awaitingTermination)
       }
+
+    case ReceiveTimeout =>
+      val msg = s"Timed-out awaiting initial RawRequest from parent ($timeout)"
+      log.error(msg)
+      throw new RuntimeException(msg)
+  }
+
+  /** States **/
+  private def awaitingResult: Receive = {
+
+    case Response(body, ev) if ev.tpe <:< typeOf[Result] =>
+      log.info(s"Response received from child")
+      write(body.asInstanceOf[ResponseBody[Result]])
+      expire()
+      become(awaitingTermination)
+    case ReceiveTimeout =>
+      log.warning(s"Timed-out awaiting Response from child")
+      write(TimedOutError.left)
+      expire()
+      become(awaitingTermination)
+    case (r: RawRequest) if Some(r) == request =>
+      log.warning(s"Received a matching duplicate RawRequest.  Safe to ignore")
+    case (r: RawRequest) =>
+      log.warning(s"Received a conflicting duplicate RawRequest.")
+      write(RequestError(s"Conflicting request: '${r.id.s}'").left)
+      expire()
+      become(awaitingTermination)
+  }
+
+  private def awaitingTermination: Receive = {
+    case _ => {}
+  }
+
+  /** Issue the Command to a child **/
+  private def issue(c: Command): Unit = {
+    val worker = context.actorOf(workerProps, "worker")
+    worker ! c
+  }
+
+  /** Notify the parent that we want to terminate **/
+  private def expire(): Unit = {
+    request match {
+      case None =>
+        throw new IllegalStateException("Unable to Expire, as no RawRequest received")
+      case Some(raw) =>
+        context.parent ! Expire(raw)
+    }
+  }
+
+  /** write a response to the broker **/
+  private def write(body: ResponseBody[Result]): Unit = {
+    val payload = body.toJson.prettyPrint.getBytes("UTF-8")
+    client.publish(
+      topic=responseTopic,
+      payload=payload)
   }
 
 }
 
 object RequestActor {
-  def props[Command:JsonReader, Result](client: ClientModule[Cont]#Client) = {
-    Props(new RequestActor[Command,Result](client))
+
+  def props[Command:JsonReader, Result:JsonWriter:TypeTag]
+           (workerProps: Props,
+            client: ClientModule[Cont]#Client,
+            responseTopic: Topic)
+           (implicit timeout: FiniteDuration) = {
+    Props(new RequestActor[Command,Result](workerProps, client, responseTopic, timeout))
   }
+
 }
 
 abstract class ApiEndpoint(
@@ -59,19 +164,18 @@ abstract class ApiEndpoint(
   import ApiEndpoint.Protocol._
   import ApiEndpoint.Types._
 
+  /** Abstract members */
   type Command
   type Result
   implicit def commandReader: JsonReader[Command]
   implicit def resultWriter: JsonWriter[Result]
+  implicit def resultTypeTag: TypeTag[Result]
+  implicit val timeout: FiniteDuration
+  protected val workerProps: Props
 
-  /** Derived types **/
-   type ResponseBody = \/[CommandError,Result]
-   case class Request(id: RequestId, command: Command)
-   case class Response(id: RequestId, body: ResponseBody)
-
-   private sealed trait ChildStatus
-   private case class Active(child: ActorRef) extends ChildStatus
-   private case class Terminating(child: ActorRef) extends ChildStatus
+  private sealed trait ChildStatus
+  private case class Active(child: ActorRef) extends ChildStatus
+  private case class Terminating(child: ActorRef) extends ChildStatus
 
   /** private state **/
   private[this] var requests = Map.empty[RequestId, ActorRef]
@@ -132,19 +236,32 @@ abstract class ApiEndpoint(
       }
   }
 
+  /** Smart constructor to allow implementations easily construct Responses
+    * of the correct type.
+    */
+  def response(body: ResponseBody[Result]): Response[Result] = {
+    Response(body, resultTypeTag)
+  }
+
   private def getOrCreateRequestActor(raw: RawRequest) = {
     (requests.get(raw.id), terminating.get(raw.id)) match {
       case (Some(child), None)       => Active(child)
       case (None, Some(terminating)) => Terminating(terminating)
       case (None, None)              => Active(spawnRequestActor(raw))
       case _  =>
-        throw new IllegalStateException(s"Child is both active *and* terminating: ${raw.id}")
+        throw new IllegalStateException(
+          s"Child is both active *and* terminating: ${raw.id}")
     }
   }
 
   private def spawnRequestActor(raw: RawRequest) = {
     log.info(s"Spawning new actor for $raw")
-    val child = context.actorOf(RequestActor.props[Command,Result](client), raw.id.s)
+    val child = context.actorOf(
+      RequestActor.props[Command,Result](
+        workerProps,
+        client,
+        responseTopic(raw.id)),
+      raw.id.s)
     requests = requests + (raw.id -> child)
     child
   }
@@ -157,12 +274,19 @@ abstract class ApiEndpoint(
   /** The TopicPattern to subscribe to to receive requests **/
   private def requestPattern = TopicPattern(root.path + "/api/+/request")
 
+  /** The Topic to publish responses to **/
+  private def responseTopic(id: RequestId) = {
+    Topic(root.path + s"/api/${id.s}/response")
+  }
 }
 
 object ApiEndpoint extends JsonUtils {
 
   object Types {
+
     case class RequestId(s: String)
+    type ResponseBody[R] = \/[CommandError,R]
+    case class Response[R] protected[ApiEndpoint] (body: ResponseBody[R], ev: TypeTag[R])
 
     trait CommandError { def msg: String }
     case class RequestError(msg: String) extends CommandError

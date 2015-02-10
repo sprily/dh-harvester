@@ -30,6 +30,7 @@ class InstanceManager(bus: ResponseBus) extends Actor
   this: ManagerProvider =>
 
   import InstanceManager.Protocol._
+  import DeviceManager.Protocol._
   import RequestActorManager.Protocol._
 
   /** The following are initialised with every (re)start **/
@@ -51,8 +52,10 @@ class InstanceManager(bus: ResponseBus) extends Actor
   }
 
   private[this] def setConfig(c: InstanceConfig) = {
-    deviceMgr ! c.devices
+    log.info(s"InstanceManager setting config: $c")
+    deviceMgr ! SetDevices(c.devices)
     reqMgr ! c.requests
+    sender ! Acked
   }
 
   private[this] def sendAdhocRequest(r: RequestLike) = {
@@ -76,6 +79,7 @@ object InstanceManager {
     case class InstanceConfig(requests: Seq[RequestLike]) {
       def devices = requests.map(_.device).distinct
     }
+    case object Acked
   }
 
 }

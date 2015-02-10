@@ -76,7 +76,8 @@ object Main extends App {
 
   val api = system.actorOf(
     InstanceApi.props(Topic("test-org/instance-config"),
-                      client),
+                      client, instanceManager,
+                      timeout=10.seconds),
     "api-instance-config")
 
   val apiActor = system.actorOf(mqtt.Requests.props(Topic("test-org"), client), "api-actor")

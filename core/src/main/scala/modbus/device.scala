@@ -4,6 +4,9 @@ package modbus
 
 import akka.util.ByteString
 
+import scalaz._
+import Scalaz._
+
 import scodec._
 import codecs._
 
@@ -25,6 +28,26 @@ case class ModbusRegisterRange(
   assert (startRegister <= endRegister)
 
   val numRegisters = endRegister - startRegister + 1
+}
+
+object ModbusRegisterRange {
+
+  def validated(startRegister: Int, endRegister: Int) = {
+    withinBounds(startRegister)                 *>
+    withinBounds(endRegister)                   *>
+    nonVacuousRange(startRegister, endRegister).map((ModbusRegisterRange.apply _).tupled)
+  }
+
+  private def withinBounds(reg: Int) = reg match {
+    case reg if reg < 0     => "Negative address".failureNel
+    case reg if reg > 65536 => "Address > 65536".failureNel
+    case reg                => reg.success
+  }
+
+  private def nonVacuousRange(start: Int, end: Int) = (start, end) match {
+    case (start, end) if start > end => "Empty address range".failureNel
+    case (start, end)                => (start, end).success
+  }
 
 }
 
