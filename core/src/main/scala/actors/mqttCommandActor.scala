@@ -209,7 +209,7 @@ abstract class ApiEndpoint(
     }
   }
 
-  def receive = {
+  final def receive = {
 
     // RawRequest straight from the broker
     case (raw: RawRequest) =>
@@ -304,7 +304,6 @@ object ApiEndpoint extends JsonUtils {
   }
 
   object Types {
-
     case class RequestId(s: String)
     type ResponseBody[R] = \/[CommandError,R]
     case class Response[R] protected[ApiEndpoint] (body: ResponseBody[R], ev: TypeTag[R])
@@ -320,7 +319,7 @@ object ApiEndpoint extends JsonUtils {
     case class Expire(raw: RawRequest)
     case class RawRequest(id: RequestId, payload: ByteString) {
 
-      def extract[T:JsonReader] = for {
+      protected[actors] def extract[T:JsonReader] = for {
         js <- json
         t  <- js.tryConvertTo[T]
       } yield t
