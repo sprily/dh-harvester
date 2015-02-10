@@ -26,7 +26,7 @@ class RequestManager(
   import RequestManager.Protocol._
 
   // Actor state
-  var requests = Map[Long, Child]()
+  var requests = Map[ScheduledRequest, Child]()
 
   def receive = {
     case (r: RequestLike)         => ensureRequest(ScheduledRequest(r, once))
@@ -36,7 +36,7 @@ class RequestManager(
 
   def ensureRequest(r: ScheduledRequest) = {
     log.info(s"Ensuring request $r")
-    requests.get(r.id) match {
+    requests.get(r) match {
       case None                        => spawnChild(r)
       case Some(child) if child.r != r => replaceChild(r)
       case _                           => ()
@@ -45,29 +45,29 @@ class RequestManager(
 
   def ensurePersistentRequests(rs: PersistentRequests) = {
     log.info(s"Ensuring PersistentRequests are set to run")
-    val activeIds = rs.requests.map(_.id).toSet
-    requests.foreach { case (id, child) =>
-      if (! activeIds.contains(id)) stopRequest(child.r)
+    val activeIds = rs.requests.toSet
+    requests.foreach { case (req, child) =>
+      if (! activeIds.contains(req)) stopRequest(req)
     }
     rs.requests foreach ensureRequest
   }
 
   final private def spawnChild(r: ScheduledRequest) = {
     val ref = context.actorOf(RequestActor.props(r.request, r.schedule, bus, deviceManager))
-    requests = requests + (r.id -> Child(r.request, ref))
+    requests = requests + (r -> Child(r.request, ref))
     context.watch(ref)
   }
 
   final private def replaceChild(r: ScheduledRequest) = {
-    requests.get(r.id).foreach { _.ref ! PoisonPill.getInstance }
+    requests.get(r).foreach { _.ref ! PoisonPill.getInstance }
     spawnChild(r)
   }
 
-  final private def stopRequest(r: RequestLike) = {
+  final private def stopRequest(r: ScheduledRequest) = {
     log.info(s"Stopping $r")
-    requests.get(r.id).foreach { child =>
+    requests.get(r).foreach { child =>
       child.ref ! PoisonPill.getInstance
-      requests = requests - r.id
+      requests = requests - r
     }
   }
 
@@ -89,11 +89,7 @@ object RequestManager {
   protected case class Child(r: RequestLike, ref: ActorRef)
 
   object Protocol {
-
-    case class ScheduledRequest(request: RequestLike, schedule: Schedule) {
-      def id = request.id
-    }
-
+    case class ScheduledRequest(request: RequestLike, schedule: Schedule)
     case class PersistentRequests(requests: Seq[ScheduledRequest])
   }
 }

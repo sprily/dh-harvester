@@ -5,7 +5,6 @@ package modbus
 import capture.RequestLike
 
 case class ModbusRequest(
-    id: Long,
     device: ModbusDevice,
     selection: ModbusRegisterRange) extends RequestLike {
 

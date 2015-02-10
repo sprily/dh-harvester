@@ -8,7 +8,6 @@ trait RequestLike {
   type Device <: DeviceLike
   type Selection = Device#AddressSelection
 
-  val id: Long
   val device: Device
   val selection: Selection
 }

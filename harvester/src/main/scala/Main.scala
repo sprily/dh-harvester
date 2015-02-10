@@ -80,7 +80,6 @@ object Main extends App {
     "api-instance-config")
 
   val request = ModbusRequest(
-    100L,
     device,
     ModbusRegisterRange(50520, 50524))
 

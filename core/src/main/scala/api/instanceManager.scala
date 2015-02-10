@@ -29,6 +29,7 @@ import network.IP4Address
 import network.TCPGateway
 import capture.RequestLike
 
+// TODO - remove modbus specifics
 import modbus.ModbusDevice
 import modbus.ModbusDeviceAddress
 import modbus.ModbusRequest
@@ -89,7 +90,7 @@ object InstanceApi extends DefaultJsonProtocol {
 
     case class InstanceConfiguration(devices: List[ManagedModbusDevice]) {
       def requests: \/[RequestError,Seq[RequestLike]] = {
-        devices.map(_.validRequests).sequenceU.map(_.flatten).disjunction.leftMap { errs =>
+        devices.map(_.validatedRequests).sequenceU.map(_.flatten).disjunction.leftMap { errs =>
           new RequestError(errs.toList.mkString("\n"))
         }
       }
@@ -102,14 +103,14 @@ object InstanceApi extends DefaultJsonProtocol {
         slaveAddress: Byte,
         requests: List[ManagedModbusRequest]) {
 
-      def device: ValidationNel[String,ModbusDevice] = {
+      def validated: ValidationNel[String,ModbusDevice] = {
         (DeviceId(id).successNel[String] |@| validDeviceAddress)(ModbusDevice)
       }
 
-      def validRequests: ValidationNel[String, List[RequestLike]] = {
-        (device.disjunction >>= { d: ModbusDevice =>
-          requests.zipWithIndex.map { case (mgdReq, idx) =>
-            mgdReq.request(idx, d)
+      def validatedRequests: ValidationNel[String, List[RequestLike]] = {
+        (validated.disjunction >>= { d: ModbusDevice =>
+          requests.map { mgdRequest =>
+            mgdRequest.validated(d)
           }.sequenceU.disjunction
         }).validation
       }
@@ -136,10 +137,9 @@ object InstanceApi extends DefaultJsonProtocol {
     }
 
     case class ManagedModbusRequest(from: Int, to: Int) {
-      def request(idx: Int, device: ModbusDevice): ValidationNel[String,RequestLike] = {
+      def validated(device: ModbusDevice): ValidationNel[String,RequestLike] = {
         ModbusRegisterRange.validated(from, to).map { range =>
           ModbusRequest(
-            id=idx,
             device=device,
             selection=range)
         }

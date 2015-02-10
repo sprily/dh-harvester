@@ -27,7 +27,7 @@ class ModbusDeviceActor(
   private lazy val gateway = context.actorSelection(s"/user/${GatewayActorDirectory.name}")
 
   def receive = {
-    case req@ModbusRequest(_, device, _) =>
+    case req@ModbusRequest(device, _) =>
       gateway forward Forward(device.address.gateway, req)
   }
 
