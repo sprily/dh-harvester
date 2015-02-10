@@ -11,11 +11,9 @@ import akka.actor.OneForOneStrategy
 import akka.actor.PoisonPill
 import akka.actor.Props
 import akka.actor.ReceiveTimeout
-import akka.actor.SupervisorStrategy._
 import akka.actor.Terminated
 
 import modbus.ModbusDevice
-import network.DeviceLike
 import scheduling.Schedule
 
 /** Manages the set of active RequestActors **/
@@ -25,7 +23,6 @@ class RequestActorManager(
 
   import RequestActorManager.Child
   import RequestActorManager.Protocol._
-  import RequestActor.PollingTimedOutException
 
   // Actor state
   var requests = Map[Long, Child]()

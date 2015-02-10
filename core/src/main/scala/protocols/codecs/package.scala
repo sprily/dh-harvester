@@ -4,7 +4,6 @@ package protocols
 
 import akka.util.ByteString
 
-import org.joda.time.DateTimeZone
 import org.joda.time.LocalDateTime
 
 import scodec.Codec

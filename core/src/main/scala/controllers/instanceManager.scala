@@ -2,8 +2,6 @@ package uk.co.sprily.dh
 package harvester
 package controllers
 
-import scala.concurrent.duration._
-
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
@@ -12,7 +10,6 @@ import akka.actor.Props
 import capture.RequestLike
 import capture.RequestActorManager
 import network.DeviceId
-import network.DeviceLike
 import scheduling.Schedule
 
 protected[controllers] trait DeviceManagerProvider {
@@ -31,7 +28,6 @@ class InstanceManager(bus: ResponseBus) extends Actor
 
   import InstanceManager.Protocol._
   import DeviceManager.Protocol._
-  import RequestActorManager.Protocol._
 
   /** The following are initialised with every (re)start **/
   private[this] var deviceMgr: ActorRef = _

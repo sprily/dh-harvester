@@ -25,7 +25,6 @@ import uk.co.sprily.mqtt.MqttMessage
 import actors.ApiEndpoint
 import controllers.InstanceManager
 import network.DeviceId
-import network.DeviceLike
 import network.IP4Address
 import network.TCPGateway
 import capture.RequestLike
@@ -42,7 +41,6 @@ class InstanceApi(
     override val timeout: FiniteDuration)
       extends ApiEndpoint(root, client) {
 
-  import ApiEndpoint.Types._
   import InstanceApi._
   import InstanceApi.DTOs._
   import InstanceManager.Protocol._

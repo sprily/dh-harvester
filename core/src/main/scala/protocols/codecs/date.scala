@@ -7,7 +7,6 @@ import org.joda.time.DateTimeZone
 import org.joda.time.LocalDateTime
 
 import scodec._
-import scodec.bits._
 import codecs._
 import scalaz.\/
 

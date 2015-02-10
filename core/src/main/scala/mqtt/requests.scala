@@ -23,8 +23,6 @@ import api.JsonFormats
 import api.JsonFormats._
 import api.ManagedRequests
 
-import capture.RequestActorManager.Protocol._
-
 import modbus.ModbusDevice
 
 class Requests(

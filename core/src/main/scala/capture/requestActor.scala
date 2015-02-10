@@ -11,9 +11,7 @@ import akka.actor.Props
 import akka.actor.ReceiveTimeout
 
 import controllers.DeviceManager
-import network.DeviceLike
 import scheduling.Schedule
-import scheduling.TargetLike
 
 class RequestActor(
     val request: RequestLike,

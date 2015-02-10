@@ -226,7 +226,6 @@ protected[actors] class RequestActor[Command:JsonReader, Result:JsonWriter:TypeT
   import ApiEndpoint.Types._
   import ApiEndpoint.Protocol._
   import ApiEndpoint.Implicits._
-  import RequestActor._
 
   /** Private state **/
   private[this] var request: Option[RawRequest] = None

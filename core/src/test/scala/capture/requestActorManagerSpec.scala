@@ -21,7 +21,6 @@ import org.specs2.mutable.SpecificationLike
 import org.specs2.time.NoTimeConversions
 
 import controllers._
-import modbus._
 import network._
 import scheduling._
 

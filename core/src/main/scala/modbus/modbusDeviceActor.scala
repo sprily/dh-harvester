@@ -7,7 +7,6 @@ import akka.actor.ActorLogging
 import akka.actor.ActorSystem
 import akka.actor.OneForOneStrategy
 import akka.actor.Props
-import akka.actor.SupervisorStrategy._
 import akka.routing.RoundRobinPool
 import akka.util.ByteString
 

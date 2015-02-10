@@ -10,6 +10,7 @@ scalacOptions in ThisBuild ++= Seq(
 	"-feature",
 	"-deprecation",
 	"-Xlint",
+        "-Ywarn-unused-import",
 	"-unchecked")
 
 lazy val core = project in file("core")

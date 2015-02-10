@@ -3,8 +3,6 @@ package harvester
 package capture
 
 import network.DeviceLike
-import scheduling.Schedule
-import scheduling.TargetLike
 
 trait RequestLike {
   type Device <: DeviceLike

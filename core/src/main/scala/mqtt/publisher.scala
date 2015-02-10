@@ -16,7 +16,6 @@ import uk.co.sprily.mqtt.ClientModule
 import uk.co.sprily.mqtt.Topic
 
 import capture.ResponseLike
-import network.DeviceLike
 import protocols.codecs
 import modbus.ModbusResponse
 

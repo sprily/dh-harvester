@@ -9,7 +9,6 @@ import modbus.ModbusDevice
 import modbus.ModbusDeviceAddress
 import modbus.ModbusRegisterRange
 import modbus.ModbusRequest
-import network.DeviceLike
 import network.DeviceId
 import network.IP4Address
 import network.TCPGateway

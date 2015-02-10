@@ -10,10 +10,6 @@ import akka.actor.ActorRef
 import akka.actor.PoisonPill
 import akka.actor.Props
 
-import scalaz._
-import scalaz.std.list._
-import scalaz.syntax.traverse._
-
 import actors.ActorDirectory
 import capture.RequestLike
 import network.DeviceId

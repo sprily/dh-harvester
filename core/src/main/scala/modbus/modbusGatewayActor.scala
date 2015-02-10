@@ -47,11 +47,9 @@ object ModbusGatewayActor {
 class ModbusGatewayActor(gateway: TCPGateway) extends Actor 
                                                  with ActorLogging {
 
-  import com.ghgande.j2mod.modbus._
   import com.ghgande.j2mod.modbus.msg.{ModbusRequest => _, ModbusResponse => _, _}
   import com.ghgande.j2mod.modbus.io._
   import com.ghgande.j2mod.modbus.net._
-  import com.ghgande.j2mod.modbus.util._
 
   private[this] var conn: TCPMasterConnection = _
 

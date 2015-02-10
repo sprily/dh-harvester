@@ -8,7 +8,6 @@ import scala.util.Success
 import spray.json._
 
 import modbus.ModbusDevice
-import network.DeviceLike
 
 // TODO: the spray JSON interface should really use Option/Try/...
 

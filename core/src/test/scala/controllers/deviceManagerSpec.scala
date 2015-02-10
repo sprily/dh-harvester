@@ -2,8 +2,6 @@ package uk.co.sprily.dh
 package harvester
 package controllers
 
-import scala.concurrent.duration._
-
 import akka.actor.Actor
 import akka.actor.ActorRef
 import akka.actor.Props
