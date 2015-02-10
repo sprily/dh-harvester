@@ -27,6 +27,7 @@ class InstanceManagerSpec extends SpecificationLike
                              with NoTimeConversions {
 
   import InstanceManager.Protocol._
+  import DeviceManager.Protocol._
 
   "An InstanceManager" should {
     
@@ -42,8 +43,8 @@ class InstanceManagerSpec extends SpecificationLike
         FakeRequest(3, FakeDevice(2))
       ))
 
-      val expected = List(FakeDevice(1), FakeDevice(2))
-      expectMsgType[Seq[DeviceLike]] must === (expected)
+      val expected = SetDevices(List(FakeDevice(1), FakeDevice(2)))
+      expectMsgType[SetDevices] must === (expected)
     }
 
     "send requests to the RequestActorManager" in new Context {
@@ -66,7 +67,7 @@ class InstanceManagerSpec extends SpecificationLike
 
   }
 
-  class Context extends AkkaSpecs2Support with ImplicitSender {
+  class Context extends AkkaSpecs2Support {
 
     def fakeResponseBus = new FakeResponseBus()
 
