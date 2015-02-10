@@ -1,6 +1,6 @@
 package uk.co.sprily.dh
 package harvester
-package capture
+package controllers
 
 import scala.language.reflectiveCalls
 
@@ -21,7 +21,8 @@ import org.specs2.time.NoTimeConversions
 import network.DeviceLike
 import network.DeviceId
 
-import controllers.DeviceManager
+import capture.ResponseLike
+import capture.RequestLike
 import scheduling.Instant
 import scheduling.Schedule
 import scheduling.TargetLike

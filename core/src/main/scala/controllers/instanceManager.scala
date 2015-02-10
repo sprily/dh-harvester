@@ -8,7 +8,6 @@ import akka.actor.ActorRef
 import akka.actor.Props
 
 import capture.RequestLike
-import capture.RequestActorManager
 import network.DeviceId
 import scheduling.Schedule
 
@@ -66,7 +65,7 @@ object InstanceManager {
   def props(bus: ResponseBus) = Props(new InstanceManager(bus) with ManagerProvider {
     override def deviceMgrProps = DeviceManager.props
     override def requestMgrProps(bus: ResponseBus, deviceMgr: ActorRef) = {
-      RequestActorManager.props(bus, deviceMgr)
+      RequestManager.props(bus, deviceMgr)
     }
   })
 

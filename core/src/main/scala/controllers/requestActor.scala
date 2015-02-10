@@ -1,6 +1,6 @@
 package uk.co.sprily.dh
 package harvester
-package capture
+package controllers
 
 import scala.concurrent.duration._
 
@@ -10,10 +10,11 @@ import akka.actor.ActorRef
 import akka.actor.Props
 import akka.actor.ReceiveTimeout
 
-import controllers.DeviceManager
+import capture.ResponseLike
+import capture.RequestLike
 import scheduling.Schedule
 
-class RequestActor(
+protected [controllers] class RequestActor(
     val request: RequestLike,
     val schedule: Schedule,
     val bus: ResponseBus,
@@ -78,7 +79,7 @@ class RequestActor(
 
 }
 
-object RequestActor {
+protected[controllers] object RequestActor {
 
   def props(request: RequestLike,
             schedule: Schedule,
@@ -87,7 +88,7 @@ object RequestActor {
     new RequestActor(request, schedule, bus, deviceManager)
   )
 
-  protected[capture] case object Protocol {
+  private[RequestActor] case object Protocol {
     case object PollNow
   }
 

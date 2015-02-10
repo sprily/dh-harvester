@@ -1,6 +1,6 @@
 package uk.co.sprily.dh
 package harvester
-package capture
+package controllers
 
 import scala.concurrent.duration._
 
@@ -13,16 +13,17 @@ import akka.actor.Props
 import akka.actor.ReceiveTimeout
 import akka.actor.Terminated
 
+import capture.RequestLike
 import modbus.ModbusDevice
 import scheduling.Schedule
 
 /** Manages the set of active RequestActors **/
-class RequestActorManager(
+class RequestManager(
     bus: ResponseBus,
     deviceManager: ActorRef) extends Actor with ActorLogging {
 
-  import RequestActorManager.Child
-  import RequestActorManager.Protocol._
+  import RequestManager.Child
+  import RequestManager.Protocol._
 
   // Actor state
   var requests = Map[Long, Child]()
@@ -79,10 +80,10 @@ class RequestActorManager(
 
 }
 
-object RequestActorManager {
+object RequestManager {
 
   def props(bus: ResponseBus, deviceManager: ActorRef) = Props(
-    new RequestActorManager(bus, deviceManager)
+    new RequestManager(bus, deviceManager)
   )
 
   protected case class Child(r: RequestLike, ref: ActorRef)
