@@ -33,142 +33,6 @@ import uk.co.sprily.mqtt.MqttMessage
 
 import api.JsonUtils
 
-
-/** Encapsulates a *single* request.  Responsible for:
-  *
-  *  - creating the work actor
-  *  - timing out the request if the worker takes too long
-  *  - writing a single response to the broker
-  */
-protected[actors] class RequestActor[Command:JsonReader, Result:JsonWriter:TypeTag](
-    workerProps: Props,
-    client: ClientModule[Cont]#Client,
-    requestRoot: Topic,
-    timeout: FiniteDuration) extends Actor with ActorLogging {
-
-  import context.become
-  import ApiEndpoint.Types._
-  import ApiEndpoint.Protocol._
-  import ApiEndpoint.Implicits._
-  import RequestActor._
-
-  /** Private state **/
-  private[this] var request: Option[RawRequest] = None
-
-  /** Constructor **/
-  context.setReceiveTimeout(timeout)
-
-  /** Akka hooks
-    *
-    *  - any exception in the worker triggers an InternalError
-    *    response to be written to the broker's reponse topic,
-    *    and this RequestActor requests to be stopped.
-    *
-    *  - Once stopped, for whatever reason, the RequestActor
-    *    writes an empty body to the request topic.
-    */
-  override val supervisorStrategy = OneForOneStrategy() {
-    case e: Exception =>
-      log.error(s"Exception in worker: $e")
-      write(InternalError.left)
-      expire()
-      become(awaitingTermination)
-      SupervisorStrategy.Stop
-  }
-  override def postStop() = cleanup()
-
-  def receive = {
-
-    case (raw: RawRequest) =>
-      request = Some(raw)
-      raw.extract[Command] match {
-        case Success(cmd) =>
-          log.info(s"Received Command $cmd")
-          issue(cmd)
-          become(awaitingResult)
-        case Failure(e) =>
-          log.warning(s"Failed to extract Command: $e")
-          write(RequestError(s"Failed to extract command: $e").left)
-          expire()
-          become(awaitingTermination)
-      }
-
-    case ReceiveTimeout =>
-      val msg = s"Timed-out awaiting initial RawRequest from parent ($timeout)"
-      log.error(msg)
-      throw new RuntimeException(msg)
-  }
-
-  private def awaitingResult: Receive = {
-
-    case Response(body, ev) if ev.tpe <:< typeOf[Result] =>
-      log.info(s"Response received from child")
-      write(body.asInstanceOf[ResponseBody[Result]])
-      expire()
-      become(awaitingTermination)
-    case ReceiveTimeout =>
-      log.warning(s"Timed-out awaiting Response from child")
-      write(TimedOutError.left)
-      expire()
-      become(awaitingTermination)
-    case (r: RawRequest) if Some(r) == request =>
-      log.warning(s"Received a matching duplicate RawRequest.  Safe to ignore")
-    case (r: RawRequest) =>
-      log.warning(s"Received a conflicting duplicate RawRequest.")
-      write(RequestError(s"Conflicting request: '${r.id.s}'").left)
-      expire()
-      become(awaitingTermination)
-  }
-
-  private def awaitingTermination: Receive = {
-    case _ => {}
-  }
-
-  /** Issue the Command to a child **/
-  private def issue(c: Command): Unit = {
-    val worker = context.actorOf(workerProps, "worker")
-    worker ! c
-  }
-
-  /** Notify the parent that we want to terminate **/
-  private def expire(): Unit = {
-    request match {
-      case None =>
-        throw new IllegalStateException("Unable to Expire, as no RawRequest received")
-      case Some(raw) =>
-        context.parent ! Expire(raw)
-    }
-  }
-
-  /** write a response to the broker **/
-  private def write(body: ResponseBody[Result]): Unit = {
-    val payload = body.toJson.prettyPrint.getBytes("UTF-8")
-    client.publish(
-      topic=responseTopic,
-      payload=payload)
-  }
-
-  /** Write an empty body to the request topic **/
-  private def cleanup(): Unit = {
-    client.publish(
-      topic=requestTopic, payload=Array.empty[Byte])
-  }
-
-  private def requestTopic = Topic(requestRoot.path + "/request")
-  private def responseTopic = Topic(requestRoot.path + "/response")
-
-}
-
-protected[actors] object RequestActor {
-  def props[Command:JsonReader, Result:JsonWriter:TypeTag]
-           (workerProps: Props,
-            client: ClientModule[Cont]#Client,
-            requestRoot: Topic)
-           (implicit timeout: FiniteDuration) = {
-    Props(new RequestActor[Command,Result](workerProps, client, requestRoot, timeout))
-  }
-}
-
 abstract class ApiEndpoint(
     root: Topic,
     client: ClientModule[Cont]#Client) extends Actor
@@ -345,3 +209,139 @@ object ApiEndpoint extends JsonUtils {
     }
   }
 }
+
+/** Encapsulates a *single* request.  Responsible for:
+  *
+  *  - creating the work actor
+  *  - timing out the request if the worker takes too long
+  *  - writing a single response to the broker
+  */
+protected[actors] class RequestActor[Command:JsonReader, Result:JsonWriter:TypeTag](
+    workerProps: Props,
+    client: ClientModule[Cont]#Client,
+    requestRoot: Topic,
+    timeout: FiniteDuration) extends Actor with ActorLogging {
+
+  import context.become
+  import ApiEndpoint.Types._
+  import ApiEndpoint.Protocol._
+  import ApiEndpoint.Implicits._
+  import RequestActor._
+
+  /** Private state **/
+  private[this] var request: Option[RawRequest] = None
+
+  /** Constructor **/
+  context.setReceiveTimeout(timeout)
+
+  /** Akka hooks
+    *
+    *  - any exception in the worker triggers an InternalError
+    *    response to be written to the broker's reponse topic,
+    *    and this RequestActor requests to be stopped.
+    *
+    *  - Once stopped, for whatever reason, the RequestActor
+    *    writes an empty body to the request topic.
+    */
+  override val supervisorStrategy = OneForOneStrategy() {
+    case e: Exception =>
+      log.error(s"Exception in worker: $e")
+      write(InternalError.left)
+      expire()
+      become(awaitingTermination)
+      SupervisorStrategy.Stop
+  }
+  override def postStop() = cleanup()
+
+  def receive = {
+
+    case (raw: RawRequest) =>
+      request = Some(raw)
+      raw.extract[Command] match {
+        case Success(cmd) =>
+          log.info(s"Received Command $cmd")
+          issue(cmd)
+          become(awaitingResult)
+        case Failure(e) =>
+          log.warning(s"Failed to extract Command: $e")
+          write(RequestError(s"Failed to extract command: $e").left)
+          expire()
+          become(awaitingTermination)
+      }
+
+    case ReceiveTimeout =>
+      val msg = s"Timed-out awaiting initial RawRequest from parent ($timeout)"
+      log.error(msg)
+      throw new RuntimeException(msg)
+  }
+
+  private def awaitingResult: Receive = {
+
+    case Response(body, ev) if ev.tpe <:< typeOf[Result] =>
+      log.info(s"Response received from child")
+      write(body.asInstanceOf[ResponseBody[Result]])
+      expire()
+      become(awaitingTermination)
+    case ReceiveTimeout =>
+      log.warning(s"Timed-out awaiting Response from child")
+      write(TimedOutError.left)
+      expire()
+      become(awaitingTermination)
+    case (r: RawRequest) if Some(r) == request =>
+      log.warning(s"Received a matching duplicate RawRequest.  Safe to ignore")
+    case (r: RawRequest) =>
+      log.warning(s"Received a conflicting duplicate RawRequest.")
+      write(RequestError(s"Conflicting request: '${r.id.s}'").left)
+      expire()
+      become(awaitingTermination)
+  }
+
+  private def awaitingTermination: Receive = {
+    case _ => {}
+  }
+
+  /** Issue the Command to a child **/
+  private def issue(c: Command): Unit = {
+    val worker = context.actorOf(workerProps, "worker")
+    worker ! c
+  }
+
+  /** Notify the parent that we want to terminate **/
+  private def expire(): Unit = {
+    request match {
+      case None =>
+        throw new IllegalStateException("Unable to Expire, as no RawRequest received")
+      case Some(raw) =>
+        context.parent ! Expire(raw)
+    }
+  }
+
+  /** write a response to the broker **/
+  private def write(body: ResponseBody[Result]): Unit = {
+    val payload = body.toJson.prettyPrint.getBytes("UTF-8")
+    client.publish(
+      topic=responseTopic,
+      payload=payload)
+  }
+
+  /** Write an empty body to the request topic **/
+  private def cleanup(): Unit = {
+    client.publish(
+      topic=requestTopic, payload=Array.empty[Byte])
+  }
+
+  private def requestTopic = Topic(requestRoot.path + "/request")
+  private def responseTopic = Topic(requestRoot.path + "/response")
+
+}
+
+protected[actors] object RequestActor {
+  def props[Command:JsonReader, Result:JsonWriter:TypeTag]
+           (workerProps: Props,
+            client: ClientModule[Cont]#Client,
+            requestRoot: Topic)
+           (implicit timeout: FiniteDuration) = {
+    Props(new RequestActor[Command,Result](workerProps, client, requestRoot, timeout))
+  }
+}
+
