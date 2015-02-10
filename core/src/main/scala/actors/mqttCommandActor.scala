@@ -33,6 +33,13 @@ import uk.co.sprily.mqtt.MqttMessage
 
 import api.JsonUtils
 
+
+/** Encapsulates a *single* request.  Responsible for:
+  *
+  *  - creating the work actor
+  *  - timing out the request if the worker takes too long
+  *  - writing a single response to the broker
+  */
 class RequestActor[Command:JsonReader, Result:JsonWriter:TypeTag](
     workerProps: Props,
     client: ClientModule[Cont]#Client,
@@ -44,15 +51,21 @@ class RequestActor[Command:JsonReader, Result:JsonWriter:TypeTag](
   import ApiEndpoint.Protocol._
   import RequestActor._
 
-  /** Derived types **/
-  //type ResponseBody = \/[CommandError,Result]
-  //type Response = ApiEndpoint.Types.Response[Result]
-  //case class Response(body: ResponseBody)
-
   /** Private state **/
   private[this] var request: Option[RawRequest] = None
 
+  /** Constructor **/
   context.setReceiveTimeout(timeout)
+
+  /** Akka hooks **/
+  override val supervisorStrategy = OneForOneStrategy() {
+    case e: Exception =>
+      log.error(s"Exception in worker: $e")
+      write(InternalError.left)
+      expire()
+      become(awaitingTermination)
+      SupervisorStrategy.Stop
+  }
 
   implicit def disjWriter[A: JsonWriter, B: JsonWriter]
                        : JsonWriter[\/[A,B]] = {
