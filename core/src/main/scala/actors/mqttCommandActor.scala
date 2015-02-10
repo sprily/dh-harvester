@@ -40,7 +40,7 @@ import api.JsonUtils
   *  - timing out the request if the worker takes too long
   *  - writing a single response to the broker
   */
-class RequestActor[Command:JsonReader, Result:JsonWriter:TypeTag](
+protected[actors] class RequestActor[Command:JsonReader, Result:JsonWriter:TypeTag](
     workerProps: Props,
     client: ClientModule[Cont]#Client,
     requestRoot: Topic,
@@ -159,8 +159,7 @@ class RequestActor[Command:JsonReader, Result:JsonWriter:TypeTag](
 
 }
 
-object RequestActor {
-
+protected[actors] object RequestActor {
   def props[Command:JsonReader, Result:JsonWriter:TypeTag]
            (workerProps: Props,
             client: ClientModule[Cont]#Client,
@@ -168,8 +167,6 @@ object RequestActor {
            (implicit timeout: FiniteDuration) = {
     Props(new RequestActor[Command,Result](workerProps, client, requestRoot, timeout))
   }
-
-
 }
 
 abstract class ApiEndpoint(
