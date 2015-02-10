@@ -34,7 +34,7 @@ import modbus.ModbusDeviceAddress
 import modbus.ModbusRequest
 import modbus.ModbusRegisterRange
 
-class InstanceApi(
+class InstanceManagerApi(
     root: Topic,
     client: ClientModule[Cont]#Client,
     instanceManager: ActorRef,
@@ -78,7 +78,7 @@ object InstanceApi extends DefaultJsonProtocol {
             client: ClientModule[Cont]#Client,
             instanceManager: ActorRef,
             timeout: FiniteDuration) = {
-    Props(new InstanceApi(root, client, instanceManager, timeout))
+    Props(new InstanceManagerApi(root, client, instanceManager, timeout))
   }
 
   object DTOs {

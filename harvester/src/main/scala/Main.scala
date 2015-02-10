@@ -79,8 +79,6 @@ object Main extends App {
                       timeout=10.seconds),
     "api-instance-config")
 
-  val apiActor = system.actorOf(mqtt.Requests.props(Topic("test-org"), client), "api-actor")
-
   val request = ModbusRequest(
     100L,
     device,
