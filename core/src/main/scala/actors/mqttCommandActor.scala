@@ -43,7 +43,7 @@ import api.JsonUtils
 class RequestActor[Command:JsonReader, Result:JsonWriter:TypeTag](
     workerProps: Props,
     client: ClientModule[Cont]#Client,
-    responseTopic: Topic,
+    requestRoot: Topic,
     timeout: FiniteDuration) extends Actor with ActorLogging {
 
   import context.become
@@ -57,7 +57,15 @@ class RequestActor[Command:JsonReader, Result:JsonWriter:TypeTag](
   /** Constructor **/
   context.setReceiveTimeout(timeout)
 
-  /** Akka hooks **/
+  /** Akka hooks
+    *
+    *  - any exception in the worker triggers an InternalError
+    *    response to be written to the broker's reponse topic,
+    *    and this RequestActor requests to be stopped.
+    *
+    *  - Once stopped, for whatever reason, the RequestActor
+    *    writes an empty body to the request topic.
+    */
   override val supervisorStrategy = OneForOneStrategy() {
     case e: Exception =>
       log.error(s"Exception in worker: $e")
@@ -66,6 +74,7 @@ class RequestActor[Command:JsonReader, Result:JsonWriter:TypeTag](
       become(awaitingTermination)
       SupervisorStrategy.Stop
   }
+  override def postStop() = cleanup()
 
   implicit def disjWriter[A: JsonWriter, B: JsonWriter]
                        : JsonWriter[\/[A,B]] = {
@@ -155,6 +164,15 @@ class RequestActor[Command:JsonReader, Result:JsonWriter:TypeTag](
       payload=payload)
   }
 
+  /** Write an empty body to the request topic **/
+  private def cleanup(): Unit = {
+    client.publish(
+      topic=requestTopic, payload=Array.empty[Byte])
+  }
+
+  private def requestTopic = Topic(requestRoot.path + "/request")
+  private def responseTopic = Topic(requestRoot.path + "/response")
+
 }
 
 object RequestActor {
@@ -162,9 +180,9 @@ object RequestActor {
   def props[Command:JsonReader, Result:JsonWriter:TypeTag]
            (workerProps: Props,
             client: ClientModule[Cont]#Client,
-            responseTopic: Topic)
+            requestRoot: Topic)
            (implicit timeout: FiniteDuration) = {
-    Props(new RequestActor[Command,Result](workerProps, client, responseTopic, timeout))
+    Props(new RequestActor[Command,Result](workerProps, client, requestRoot, timeout))
   }
 
 }
@@ -273,7 +291,7 @@ abstract class ApiEndpoint(
       RequestActor.props[Command,Result](
         workerProps,
         client,
-        responseTopic(raw.id)),
+        requestRoot(raw.id)),
       raw.id.s)
     requests = requests + (raw.id -> child)
     child
@@ -290,6 +308,11 @@ abstract class ApiEndpoint(
   /** The Topic to publish responses to **/
   private def responseTopic(id: RequestId) = {
     Topic(root.path + s"/api/${id.s}/response")
+  }
+
+  /** The Topic that roots the given request id **/
+  private def requestRoot(id: RequestId) = {
+    Topic(root.path + s"/api/${id.s}")
   }
 }
 
