@@ -49,6 +49,7 @@ class RequestActor[Command:JsonReader, Result:JsonWriter:TypeTag](
   import context.become
   import ApiEndpoint.Types._
   import ApiEndpoint.Protocol._
+  import ApiEndpoint.Implicits._
   import RequestActor._
 
   /** Private state **/
@@ -76,22 +77,6 @@ class RequestActor[Command:JsonReader, Result:JsonWriter:TypeTag](
   }
   override def postStop() = cleanup()
 
-  implicit def disjWriter[A: JsonWriter, B: JsonWriter]
-                       : JsonWriter[\/[A,B]] = {
-    new JsonWriter[\/[A,B]] {
-      def write(e: \/[A,B]) = e.fold(
-        a => implicitly[JsonWriter[A]].write(a),
-        b => implicitly[JsonWriter[B]].write(b)
-      )
-    }
-  }
-
-  implicit def errorWriter: JsonWriter[CommandError] = {
-    new JsonWriter[CommandError] {
-      def write(e: CommandError) = JsObject("error" -> JsString(e.msg))
-    }
-  }
-
   def receive = {
 
     case (raw: RawRequest) =>
@@ -114,7 +99,6 @@ class RequestActor[Command:JsonReader, Result:JsonWriter:TypeTag](
       throw new RuntimeException(msg)
   }
 
-  /** States **/
   private def awaitingResult: Receive = {
 
     case Response(body, ev) if ev.tpe <:< typeOf[Result] =>
@@ -184,6 +168,7 @@ object RequestActor {
            (implicit timeout: FiniteDuration) = {
     Props(new RequestActor[Command,Result](workerProps, client, requestRoot, timeout))
   }
+
 
 }
 
@@ -347,6 +332,24 @@ object ApiEndpoint extends JsonUtils {
     }
   }
 
+  object Implicits {
+    import Types._
+    implicit def disjWriter[A: JsonWriter, B: JsonWriter]
+                         : JsonWriter[\/[A,B]] = {
+      new JsonWriter[\/[A,B]] {
+        def write(e: \/[A,B]) = e.fold(
+          a => implicitly[JsonWriter[A]].write(a),
+          b => implicitly[JsonWriter[B]].write(b)
+        )
+      }
+    }
+
+    implicit def errorWriter: JsonWriter[CommandError] = {
+      new JsonWriter[CommandError] {
+        def write(e: CommandError) = JsObject("error" -> JsString(e.msg))
+      }
+    }
+  }
 }
 
 
