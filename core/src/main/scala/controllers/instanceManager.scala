@@ -2,11 +2,14 @@ package uk.co.sprily.dh
 package harvester
 package controllers
 
+import scala.concurrent.duration.FiniteDuration
+
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.actor.Props
 
+import capture.ScheduledRequestLike
 import capture.RequestLike
 import network.DeviceId
 import scheduling.Schedule
@@ -19,7 +22,8 @@ protected[controllers] trait RequestManagerProvider {
   def requestMgrProps(bus: ResponseBus, deviceMgr: ActorRef): Props
 }
 
-protected[controllers] trait ManagerProvider extends DeviceManagerProvider with RequestManagerProvider
+protected[controllers] trait ManagerProvider extends DeviceManagerProvider
+                                                with RequestManagerProvider
 
 class InstanceManager(bus: ResponseBus) extends Actor
                                            with ActorLogging {
@@ -70,9 +74,9 @@ object InstanceManager {
   })
 
   object Protocol {
-    case class AdhocRequest(request: RequestLike)
-    case class InstanceConfig(requests: Seq[RequestLike]) {
-      def devices = requests.map(_.device).distinct
+    case class AdhocRequest(request: RequestLike, timeout: FiniteDuration)
+    case class InstanceConfig(requests: Seq[ScheduledRequestLike]) {
+      def devices = requests.map(_._1.device).distinct
     }
     case object Acked
   }

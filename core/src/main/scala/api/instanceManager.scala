@@ -28,6 +28,8 @@ import network.DeviceId
 import network.IP4Address
 import network.TCPGateway
 import capture.RequestLike
+import capture.ScheduledRequestLike
+import scheduling.Schedule
 
 // TODO - remove modbus specifics
 import modbus.ModbusDevice
@@ -84,12 +86,14 @@ object InstanceApi extends DefaultJsonProtocol {
 
   object DTOs {
 
-    implicit def requestJson = jsonFormat2(ManagedModbusRequest)
+    private type Valid[T] = ValidationNel[String,T]
+
+    implicit def requestJson = jsonFormat3(ManagedModbusRequest)
     implicit def deviceJson  = jsonFormat5(ManagedModbusDevice)
     implicit def configJson  = jsonFormat1(InstanceConfiguration)
 
     case class InstanceConfiguration(devices: List[ManagedModbusDevice]) {
-      def requests: \/[RequestError,Seq[RequestLike]] = {
+      def requests: \/[RequestError,Seq[ScheduledRequestLike]] = {
         devices.map(_.validatedRequests).sequenceU.map(_.flatten).disjunction.leftMap { errs =>
           new RequestError(errs.toList.mkString("\n"))
         }
@@ -103,11 +107,11 @@ object InstanceApi extends DefaultJsonProtocol {
         slaveAddress: Byte,
         requests: List[ManagedModbusRequest]) {
 
-      def validated: ValidationNel[String,ModbusDevice] = {
+      def validated: Valid[ModbusDevice] = {
         (DeviceId(id).successNel[String] |@| validDeviceAddress)(ModbusDevice)
       }
 
-      def validatedRequests: ValidationNel[String, List[RequestLike]] = {
+      def validatedRequests: Valid[List[ScheduledRequestLike]] = {
         (validated.disjunction >>= { d: ModbusDevice =>
           requests.map { mgdRequest =>
             mgdRequest.validated(d)
@@ -136,13 +140,20 @@ object InstanceApi extends DefaultJsonProtocol {
 
     }
 
-    case class ManagedModbusRequest(from: Int, to: Int) {
-      def validated(device: ModbusDevice): ValidationNel[String,RequestLike] = {
-        ModbusRegisterRange.validated(from, to).map { range =>
-          ModbusRequest(
-            device=device,
-            selection=range)
-        }
+    case class ManagedModbusRequest(from: Int, to: Int, every: Int) {
+      def validated(device: ModbusDevice): Valid[ScheduledRequestLike] = {
+        for {
+          s <- validSchedule
+          range <- ModbusRegisterRange.validated(from, to)
+          request = ModbusRequest(device=device, selection=range)
+        } yield (request, s)
+      }
+
+      private[this] def validSchedule: Valid[Schedule] = every match {
+        case seconds if seconds <= 0 =>
+          s"Non-positive schedule: ${seconds}".failureNel
+        case seconds =>
+          Schedule.each(seconds.seconds).success
       }
     }
 

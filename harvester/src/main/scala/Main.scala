@@ -19,6 +19,7 @@ import network._
 import modbus._
 import capture._
 import mqtt._
+import scheduling.Schedule
 
 
 object Main extends App {
@@ -83,7 +84,9 @@ object Main extends App {
     device,
     ModbusRegisterRange(50520, 50524))
 
-  instanceManager ! InstanceManager.Protocol.InstanceConfig(List(request))
+  val scheduledRequest = (request, Schedule.each(5.seconds))
+
+  instanceManager ! InstanceManager.Protocol.InstanceConfig(List(scheduledRequest))
 
   println("Press enter to stop")
   readLine()
