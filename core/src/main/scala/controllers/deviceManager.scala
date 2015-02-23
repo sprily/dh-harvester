@@ -34,6 +34,7 @@ class DeviceManager extends Actor with ActorLogging {
   }
 
   private[this] def setDevices(ds: Seq[DeviceLike]) = {
+    log.info(s"Setting devices to: $ds")
     val existing = devices.values.toSet
     val toRemove = devices.values.filter(!ds.contains(_))
     val toAdd = ds.filter(!existing.contains(_))

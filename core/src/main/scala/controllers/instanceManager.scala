@@ -31,6 +31,7 @@ class InstanceManager(bus: ResponseBus) extends Actor
 
   import InstanceManager.Protocol._
   import DeviceManager.Protocol._
+  import RequestManager.Protocol._
 
   /** The following are initialised with every (re)start **/
   private[this] var deviceMgr: ActorRef = _
@@ -41,20 +42,23 @@ class InstanceManager(bus: ResponseBus) extends Actor
   override def preStart(): Unit = {
     log.info("Creating device manager")
     deviceMgr = context.actorOf(deviceMgrProps, "device-manager")
+    modbus.ModbusDeviceActor.registerWithManager(deviceMgr)
+
     log.info("Creating request manager")
     reqMgr    = context.actorOf(requestMgrProps(bus, deviceMgr), "request-manager")
   }
 
   def receive = {
-    case (c: InstanceConfig) => setConfig(c)
-    case AdhocRequest(r)     => sendAdhocRequest(r)
+    case (c: InstanceConfig)      => setConfig(c)
+    case AdhocRequest(r, timeout) => sendAdhocRequest(r)
   }
 
   private[this] def setConfig(c: InstanceConfig) = {
     log.info(s"InstanceManager setting config: $c")
     deviceMgr ! SetDevices(c.devices)
-    reqMgr ! c.requests
-    sender ! Acked
+    log.info(s"Sending ${c.requests} to $reqMgr")
+    reqMgr ! PersistentRequests(c.requests)
+    sender ! Acked  // TODO: really, should be waiting from positive response from both
   }
 
   private[this] def sendAdhocRequest(r: RequestLike) = {

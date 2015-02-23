@@ -13,6 +13,8 @@ import akka.actor.Props
 import akka.actor.ReceiveTimeout
 import akka.actor.Terminated
 
+import capture.ScheduledRequestLike
+import capture.ResponseLike
 import capture.RequestLike
 import modbus.ModbusDevice
 import scheduling.Schedule
@@ -26,57 +28,49 @@ class RequestManager(
   import RequestManager.Protocol._
 
   // Actor state
-  var requests = Map[ScheduledRequest, Child]()
+  private var persistentRequests = Map[ScheduledRequestLike, Child]()
+  private var adhocRequests      = Map[RequestLike, Child]()
 
   def receive = {
-    case (r: RequestLike)         => ensureRequest(ScheduledRequest(r, once))
-    case (rs: PersistentRequests) => ensurePersistentRequests(rs)
-    case Terminated(a)            => handleChildTerminated(a)
+    //case AdhocRequest(r, timeout) => adhocRequest(r, timeout, sender)
+    case PersistentRequests(rs)   => setPersistent(rs)
+    case Terminated(a)            => handleTermination(a)
+    case other => log.warning(s"Unhandled: $other")
   }
 
-  def ensureRequest(r: ScheduledRequest) = {
-    log.info(s"Ensuring request $r")
-    requests.get(r) match {
-      case None                        => spawnChild(r)
-      case Some(child) if child.r != r => replaceChild(r)
-      case _                           => ()
+  private[this] def setPersistent(reqs: Seq[ScheduledRequestLike]) = {
+
+    log.info(s"Setting persistent requests: $reqs")
+
+    persistentRequests.foreach { case (schReq, child) =>
+      if (! reqs.contains(schReq)) { stopChild(child) }
+    }
+
+    reqs.foreach { schReq =>
+      persistentRequests.get(schReq) match {
+        case None        => spawn(schReq)
+        case Some(child) => ()
+      }
     }
   }
 
-  def ensurePersistentRequests(rs: PersistentRequests) = {
-    log.info(s"Ensuring PersistentRequests are set to run")
-    val activeIds = rs.requests.toSet
-    requests.foreach { case (req, child) =>
-      if (! activeIds.contains(req)) stopRequest(req)
-    }
-    rs.requests foreach ensureRequest
-  }
-
-  final private def spawnChild(r: ScheduledRequest) = {
-    val ref = context.actorOf(RequestActor.props(r.request, r.schedule, bus, deviceManager))
-    requests = requests + (r -> Child(r.request, ref))
+  private[this] def spawn(sr: ScheduledRequestLike) = {
+    log.info(s"Spawning child: $sr")
+    val (request, schedule) = sr
+    val ref = context.actorOf(RequestActor.props(request, schedule, bus, deviceManager))
+    persistentRequests = persistentRequests + (sr -> Child(sr, ref))
     context.watch(ref)
   }
 
-  final private def replaceChild(r: ScheduledRequest) = {
-    requests.get(r).foreach { _.ref ! PoisonPill.getInstance }
-    spawnChild(r)
+  private[this] def stopChild(child: Child) = {
+    log.info(s"Stopping child $child")
+    child.ref ! PoisonPill.getInstance
   }
 
-  final private def stopRequest(r: ScheduledRequest) = {
-    log.info(s"Stopping $r")
-    requests.get(r).foreach { child =>
-      child.ref ! PoisonPill.getInstance
-      requests = requests - r
-    }
-  }
-
-  final private def handleChildTerminated(a: ActorRef) = {
+  private[this] def handleTermination(a: ActorRef) = {
     log.info(s"Child RequestActor terminated $a")
-    requests = requests.filter { case (_, Child(_, ref)) => a != ref }
+    persistentRequests = persistentRequests.filter { case (_, Child(_, ref)) => a != ref }
   }
-
-  final private def once = Schedule.single(60.seconds)
 
 }
 
@@ -86,10 +80,9 @@ object RequestManager {
     new RequestManager(bus, deviceManager)
   )
 
-  protected case class Child(r: RequestLike, ref: ActorRef)
+  protected case class Child(sr: ScheduledRequestLike, ref: ActorRef)
 
   object Protocol {
-    case class ScheduledRequest(request: RequestLike, schedule: Schedule)
-    case class PersistentRequests(requests: Seq[ScheduledRequest])
+    case class PersistentRequests(requests: Seq[ScheduledRequestLike])
   }
 }

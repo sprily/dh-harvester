@@ -64,10 +64,9 @@ object Main extends App {
   instanceManager ! InstanceManager.Protocol.InstanceConfig(Nil)
 
   ModbusGatewayActor.registerWithDirectory(system)
-  ModbusDeviceActor.registerWithManager(system)
+  //ModbusDeviceActor.registerWithManager(system)
 
   import RequestManager.Protocol.PersistentRequests
-  import RequestManager.Protocol.ScheduledRequest
 
   val client = Await.result(AsyncSimpleClient.connect(MqttOptions.cleanSession()), 3.seconds)
 

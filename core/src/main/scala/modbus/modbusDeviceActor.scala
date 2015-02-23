@@ -4,6 +4,7 @@ package modbus
 
 import akka.actor.Actor
 import akka.actor.ActorLogging
+import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.OneForOneStrategy
 import akka.actor.Props
@@ -35,10 +36,9 @@ class ModbusDeviceActor(
 
 object ModbusDeviceActor {
 
-  def registerWithManager(system: ActorSystem): Unit = {
+  def registerWithManager(actor: ActorRef): Unit = {
     import DeviceManager.Protocol.Register
-    val manager = system.actorSelection(s"/user/${DeviceManager.name}")
-    manager ! Register {
+    actor ! Register {
       case (d: ModbusDevice) => props(d)
     }
   }
