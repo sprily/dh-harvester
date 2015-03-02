@@ -36,15 +36,15 @@ import modbus.ModbusDeviceAddress
 import modbus.ModbusRequest
 import modbus.ModbusRegisterRange
 
-class InstanceManagerApi(
+class InstanceConfigEndpoint(
     root: Topic,
     client: ClientModule[Cont]#Client,
     instanceManager: ActorRef,
     override val timeout: FiniteDuration)
       extends ApiEndpoint(root, client) {
 
-  import InstanceApi._
-  import InstanceApi.DTOs._
+  import InstanceConfigEndpoint._
+  import InstanceConfigEndpoint.DTOs._
   import InstanceManager.Protocol._
 
   type Command = InstanceConfiguration
@@ -72,7 +72,7 @@ class InstanceManagerApi(
 
 }
 
-object InstanceApi extends DefaultJsonProtocol {
+object InstanceConfigEndpoint extends DefaultJsonProtocol {
 
   import ApiEndpoint.Types._
 
@@ -80,7 +80,7 @@ object InstanceApi extends DefaultJsonProtocol {
             client: ClientModule[Cont]#Client,
             instanceManager: ActorRef,
             timeout: FiniteDuration) = {
-    Props(new InstanceManagerApi(root, client, instanceManager, timeout))
+    Props(new InstanceConfigEndpoint(root, client, instanceManager, timeout))
   }
 
   object DTOs {

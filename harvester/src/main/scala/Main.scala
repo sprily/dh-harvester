@@ -74,9 +74,9 @@ object Main extends App {
     new ResultsPublisher( Topic("test-org"), bus, client)), "mqtt-publisher")
 
   val api = system.actorOf(
-    InstanceApi.props(Topic("test-org/instance-config"),
-                      client, instanceManager,
-                      timeout=10.seconds),
+    InstanceConfigEndpoint.props(Topic("test-org/instance-config"),
+                                 client, instanceManager,
+                                 timeout=10.seconds),
     "api-instance-config")
 
   val adhocRequestEndpoint = system.actorOf(
