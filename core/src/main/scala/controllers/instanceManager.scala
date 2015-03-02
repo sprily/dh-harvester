@@ -11,6 +11,7 @@ import akka.actor.Props
 
 import capture.ScheduledRequestLike
 import network.DeviceId
+import network.DeviceLike
 import scheduling.Schedule
 
 protected[controllers] trait DeviceManagerProvider {
@@ -40,7 +41,6 @@ class InstanceManager(bus: ResponseBus) extends Actor
   override def preStart(): Unit = {
     log.info("Creating device manager")
     deviceMgr = context.actorOf(deviceMgrProps, "device-manager")
-    modbus.ModbusDeviceActor.registerWithManager(deviceMgr)
 
     log.info("Creating request manager")
     reqMgr    = context.actorOf(requestMgrProps(bus, deviceMgr), "request-manager")
@@ -64,12 +64,16 @@ class InstanceManager(bus: ResponseBus) extends Actor
 object InstanceManager {
 
   def name = "instance-manager"
-  def props(bus: ResponseBus) = Props(new InstanceManager(bus) with ManagerProvider {
-    override def deviceMgrProps = DeviceManager.props
-    override def requestMgrProps(bus: ResponseBus, deviceMgr: ActorRef) = {
-      RequestManager.props(bus, deviceMgr)
-    }
-  })
+
+  def props(bus: ResponseBus)
+           (registeredDevices: PartialFunction[DeviceLike,Props]) = {
+    Props(new InstanceManager(bus) with ManagerProvider {
+      override def deviceMgrProps = DeviceManager.props(registeredDevices)
+      override def requestMgrProps(bus: ResponseBus, deviceMgr: ActorRef) = {
+        RequestManager.props(bus, deviceMgr)
+      }
+    })
+  }
 
   object Protocol {
     case class InstanceConfig(requests: Seq[ScheduledRequestLike]) {

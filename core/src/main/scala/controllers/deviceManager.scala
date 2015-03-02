@@ -18,21 +18,20 @@ import network.DeviceLike
 /** Manages the devices that this instance communicates with.
   *
   */
-class DeviceManager extends Actor with ActorLogging {
+class DeviceManager(deviceTypes: PartialFunction[DeviceLike,Props])
+    extends Actor with ActorLogging {
 
   import DeviceManager._
   import DeviceManager.Protocol._
 
   private[this] var devices = Map.empty[DeviceId, DeviceLike]
   private[this] var children = Map.empty[DeviceId, ActorRef]
-  private[this] var deviceTypes: PropsFactory = Map.empty
 
   def receive = {
 
     case (r: ModbusProtocol.AdhocRequest) => handleModbusReq(r)
 
     case SetDevices(ds)       => setDevices(ds)
-    case Register(deviceType) => registerDeviceType(deviceType)
     case (r: RequestLike)     => forwardRequest(r)
   }
 
@@ -87,20 +86,12 @@ class DeviceManager extends Actor with ActorLogging {
     }
   }
 
-  private[this] def registerDeviceType(deviceType: PropsFactory) = {
-    deviceTypes = deviceType orElse deviceTypes
-  }
-
 }
 
 object DeviceManager {
 
-  type PropsFactory = PartialFunction[DeviceLike, Props]
-
   object Protocol {
     case class SetDevices(devices: Seq[DeviceLike])
-    case class Register(props: PropsFactory)
-
     case class UnknownDevice(id: DeviceId)
   }
 
@@ -111,6 +102,8 @@ object DeviceManager {
   }
 
   def name = "device-manager"
-  def props = Props(new DeviceManager())
+  def props(registeredDevices: PartialFunction[DeviceLike,Props]) = {
+    Props(new DeviceManager(registeredDevices))
+  }
 
 }

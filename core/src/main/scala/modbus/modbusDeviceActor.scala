@@ -13,6 +13,7 @@ import akka.util.ByteString
 
 import capture.GatewayActorDirectory
 import controllers.DeviceManager
+import network.DeviceLike
 
 /** An Actor representing a single ModbusDevice.
   *
@@ -35,15 +36,8 @@ class ModbusDeviceActor(
 }
 
 object ModbusDeviceActor {
-
-  def registerWithManager(actor: ActorRef): Unit = {
-    import DeviceManager.Protocol.Register
-    actor ! Register {
-      case (d: ModbusDevice) => props(d)
-    }
+  def props(device: DeviceLike) = device match {
+    case (d: ModbusDevice) => Props(new ModbusDeviceActor(d))
   }
-
-  def props(d: ModbusDevice) = Props(new ModbusDeviceActor(d))
-
 }
 

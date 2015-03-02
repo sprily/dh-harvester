@@ -57,8 +57,12 @@ object Main extends App {
     GatewayActorDirectory.props,
     GatewayActorDirectory.name)
 
+  val registeredDevices: PartialFunction[DeviceLike,Props] = {
+    case (d: ModbusDevice) => ModbusDeviceActor.props(d)
+  }
+
   val instanceManager = system.actorOf(
-    InstanceManager.props(bus),
+    InstanceManager.props(bus)(registeredDevices),
     InstanceManager.name)
 
   instanceManager ! InstanceManager.Protocol.InstanceConfig(Nil)
