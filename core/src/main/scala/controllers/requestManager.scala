@@ -2,8 +2,6 @@ package uk.co.sprily.dh
 package harvester
 package controllers
 
-import scala.concurrent.duration._
-
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
@@ -14,7 +12,6 @@ import akka.actor.ReceiveTimeout
 import akka.actor.Terminated
 
 import capture.ScheduledRequestLike
-import capture.ResponseLike
 import capture.RequestLike
 import modbus.ModbusDevice
 import scheduling.Schedule

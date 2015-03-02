@@ -27,7 +27,6 @@ import controllers.InstanceManager
 import network.DeviceId
 import network.IP4Address
 import network.TCPGateway
-import capture.RequestLike
 import capture.ScheduledRequestLike
 import scheduling.Schedule
 

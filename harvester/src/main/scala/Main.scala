@@ -79,6 +79,12 @@ object Main extends App {
                       timeout=10.seconds),
     "api-instance-config")
 
+  val adhocRequestEndpoint = system.actorOf(
+    AdhocRequestsEndpoint.props(Topic("test-org/adhoc-requests"),
+                                client, instanceManager,
+                                timeout=10.seconds),
+    "api-adhoc-requests")
+
   val request = ModbusRequest(
     device,
     ModbusRegisterRange(50520, 50524))

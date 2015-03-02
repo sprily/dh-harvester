@@ -10,7 +10,6 @@ import akka.actor.ActorRef
 import akka.actor.Props
 
 import capture.ScheduledRequestLike
-import capture.RequestLike
 import network.DeviceId
 import scheduling.Schedule
 
@@ -37,7 +36,6 @@ class InstanceManager(bus: ResponseBus) extends Actor
   private[this] var deviceMgr: ActorRef = _
   private[this] var reqMgr:    ActorRef = _
 
-
   /** Actor Hooks **/
   override def preStart(): Unit = {
     log.info("Creating device manager")
@@ -50,7 +48,7 @@ class InstanceManager(bus: ResponseBus) extends Actor
 
   def receive = {
     case (c: InstanceConfig)      => setConfig(c)
-    case AdhocRequest(r, timeout) => sendAdhocRequest(r)
+    case other                    => deviceMgr forward other
   }
 
   private[this] def setConfig(c: InstanceConfig) = {
@@ -59,10 +57,6 @@ class InstanceManager(bus: ResponseBus) extends Actor
     log.info(s"Sending ${c.requests} to $reqMgr")
     reqMgr ! PersistentRequests(c.requests)
     sender ! Acked  // TODO: really, should be waiting from positive response from both
-  }
-
-  private[this] def sendAdhocRequest(r: RequestLike) = {
-    //adhocMgr forward r
   }
 
 }
@@ -78,7 +72,6 @@ object InstanceManager {
   })
 
   object Protocol {
-    case class AdhocRequest(request: RequestLike, timeout: FiniteDuration)
     case class InstanceConfig(requests: Seq[ScheduledRequestLike]) {
       def devices = requests.map(_._1.device).distinct
     }

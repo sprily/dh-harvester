@@ -28,9 +28,31 @@ class DeviceManager extends Actor with ActorLogging {
   private[this] var deviceTypes: PropsFactory = Map.empty
 
   def receive = {
+
+    case (r: ModbusProtocol.AdhocRequest) => handleModbusReq(r)
+
     case SetDevices(ds)       => setDevices(ds)
     case Register(deviceType) => registerDeviceType(deviceType)
     case (r: RequestLike)     => forwardRequest(r)
+  }
+
+  private[this] def handleModbusReq(r: ModbusProtocol.AdhocRequest) = {
+
+    import modbus._
+
+    log.debug(s"Handling adhoc modbus request: $r")
+    devices.get(r.id).map {
+      case (d: ModbusDevice) =>
+        val req = ModbusRequest(d, ModbusRegisterRange(r.from, r.to))
+        forwardRequest(req)
+      case d =>
+        log.info(s"DeviceId doesn't match expected type: $d")
+        sender ! UnknownDevice(r.id)
+    }.getOrElse {
+      log.info(s"Unknown device: ${devices.keys}")
+      sender ! UnknownDevice(r.id)
+    }
+
   }
 
   private[this] def setDevices(ds: Seq[DeviceLike]) = {
@@ -61,7 +83,7 @@ class DeviceManager extends Actor with ActorLogging {
       case Some(child) => child forward r
       case None        => 
         log.warning(s"Unable to forward request: $r")
-        sender ! UnknownDevice(r.device)
+        sender ! UnknownDevice(r.device.id)
     }
   }
 
@@ -79,7 +101,13 @@ object DeviceManager {
     case class SetDevices(devices: Seq[DeviceLike])
     case class Register(props: PropsFactory)
 
-    case class UnknownDevice(device: DeviceLike)
+    case class UnknownDevice(id: DeviceId)
+  }
+
+  /** This cannot really live here long-term **/
+  @deprecated("Avoid referencing modbus directly", since="time began")
+  object ModbusProtocol {
+    case class AdhocRequest(id: DeviceId, from: Int, to: Int)
   }
 
   def name = "device-manager"

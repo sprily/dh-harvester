@@ -30,7 +30,7 @@ object IP4Address {
     IP4Address((raw1, raw2, raw3, raw4))
   }
 
-  @deprecated
+  @deprecated("Use validated() instead", since="time began")
   def fromString(host: String): Option[IP4Address] = host match {
     case "localhost" => Some(localhost)
     case _           => None
